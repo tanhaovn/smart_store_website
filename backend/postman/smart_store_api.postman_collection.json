@@ -1,0 +1,431 @@
+{
+  "info": {
+    "name": "Smart Store Flask API",
+    "description": "Postman collection for USER, SELLER, ADMIN, DELIVERY APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:5000"
+    },
+    {
+      "key": "user_token",
+      "value": ""
+    },
+    {
+      "key": "seller_token",
+      "value": ""
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "delivery_token",
+      "value": ""
+    },
+    {
+      "key": "product_id",
+      "value": "1"
+    },
+    {
+      "key": "cart_id",
+      "value": "1"
+    },
+    {
+      "key": "order_id",
+      "value": "1"
+    },
+    {
+      "key": "seller_id",
+      "value": "2"
+    },
+    {
+      "key": "user_id",
+      "value": "3"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user2@smartstore.local\",\n  \"password\": \"Hao@1909\",\n  \"full_name\": \"User Two\",\n  \"phone\": \"0944444444\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "User Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user1@smartstore.local\",\n  \"password\": \"Hao@1909\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Seller Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"seller1@smartstore.local\",\n  \"password\": \"Hao@1909\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/seller-login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "seller-login"]
+            }
+          }
+        },
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@smartstore.local\",\n  \"password\": \"Hao@1909\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/admin-login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "admin-login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/user/products?query=tai",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "products"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "tai"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Product Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/user/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "products", "{{product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Add To Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{product_id}},\n  \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/cart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "cart"]
+            }
+          }
+        },
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/cart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "cart"]
+            }
+          }
+        },
+        {
+          "name": "Place Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipping_address\": \"456 Nguyen Trai, HCM\",\n  \"shipping_phone\": \"0933333333\",\n  \"payment_method\": \"COD\",\n  \"note\": \"Giao gio hanh chinh\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Track My Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "orders"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seller",
+      "item": [
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seller_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ban phim co\",\n  \"description\": \"Layout TKL\",\n  \"price\": 790000,\n  \"stock\": 25,\n  \"category_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/seller/products",
+              "host": ["{{base_url}}"],
+              "path": ["api", "seller", "products"]
+            }
+          }
+        },
+        {
+          "name": "Seller Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seller_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/seller/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "seller", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Revenue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seller_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/seller/revenue",
+              "host": ["{{base_url}}"],
+              "path": ["api", "seller", "revenue"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "Pending Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/products/pending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "products", "pending"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delivery",
+      "item": [
+        {
+          "name": "Shipping Fee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{delivery_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"distance_km\": 5,\n  \"weight_kg\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/delivery/shipping-fee",
+              "host": ["{{base_url}}"],
+              "path": ["api", "delivery", "shipping-fee"]
+            }
+          }
+        },
+        {
+          "name": "Update Delivery Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{delivery_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DANG_GIAO\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/delivery/orders/{{order_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "delivery", "orders", "{{order_id}}", "status"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

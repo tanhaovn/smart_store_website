@@ -1,0 +1,82 @@
+HUONG DAN LAM VIEC THEO NHANH - SMART VISION SHOP
+
+1) CHIEN LUOC NHANH
+- Nhanh on dinh: main
+- Nhanh tong hop noi bo: develop
+- Nhanh chuc nang: feature/<ten-chuc-nang>
+- Nhanh sua loi gap: hotfix/<ten-loi>
+
+2) DANH SACH NHANH CHUC NANG DE XUAT
+- feature/authentication
+- feature/user-shopping
+- feature/seller-management
+- feature/admin-management
+- feature/delivery-tracking
+- feature/payment-checkout
+- feature/realtime-chat
+- feature/ui-frontend
+- feature/backend-api
+
+3) QUY TRINH LAM CHUC NANG (NHU DU AN THAT)
+Buoc 1: Chuyen sang develop va cap nhat moi nhat
+  git checkout develop
+  git pull origin develop
+
+Buoc 2: Tao nhanh chuc nang tu develop
+  git checkout -b feature/<ten-chuc-nang>
+
+Buoc 3: Code + commit nho gon, ro rang
+  git add .
+  git commit -m "feat(<scope>): mo ta ngan gon"
+
+Buoc 4: Day nhanh len remote
+  git push -u origin feature/<ten-chuc-nang>
+
+Buoc 5: Tao Pull Request vao develop
+- Tieu de PR ro rang
+- Mo ta thay doi
+- Dinh kem hinh/test neu co
+
+Buoc 6: Sau khi merge vao develop
+- Xoa nhanh feature neu khong dung nua:
+  git branch -d feature/<ten-chuc-nang>
+  git push origin --delete feature/<ten-chuc-nang>
+
+4) QUY TAC DAT TEN COMMIT (GOI Y)
+- feat: them tinh nang
+- fix: sua loi
+- refactor: cai to code khong doi nghiep vu
+- chore: viec he thong/tool
+- docs: cap nhat tai lieu
+
+Vi du:
+- feat(auth): them dang nhap JWT
+- fix(cart): sua loi tinh tong tien
+- docs(branching): cap nhat huong dan lam viec theo nhanh
+
+5) NGUYEN TAC KHI LAM VIEC NHOM
+- Khong code truc tiep tren main
+- Main chi nhan code da review
+- Moi chuc nang la 1 nhanh rieng
+- PR nho, de review
+- Luon pull develop moi nhat truoc khi bat dau task moi
+
+6) NHANH KHI GHI CHU CONG VIEC
+Khi bat dau task moi, ghi theo mau:
+- Nhanh: feature/<ten-chuc-nang>
+- Nguoi lam: <ten>
+- Muc tieu: <mo ta ngan>
+- Dau viec chinh:
+  + [ ] Viec 1
+  + [ ] Viec 2
+  + [ ] Viec 3
+- Thoi gian du kien: <ngay>
+- Link PR: <link>
+
+7) MO HINH RELEASE DE XUAT
+- Merge feature -> develop (hang ngay)
+- Kiem thu tren develop
+- Chot release: merge develop -> main
+- Gan tag version: v1.0.0, v1.1.0 ...
+
+Tai lieu nay duoc tao de thong nhat cach lam viec nhu du an production.

@@ -1,0 +1,70 @@
+│
+├── 1. USER (Khách hàng)
+│   ├── 1.1 Đăng ký / đăng nhập
+│   ├── 1.2 Tìm kiếm
+│   ├── 1.3 Xem chi tiết sản phẩm
+│   ├── 1.4 Quản lý giỏ hàng
+│   │   ├── Thêm sản phẩm
+│   │   ├── Xóa / cập nhật số lượng
+│   ├── 1.5 Đặt hàng
+│   │   ├── Nhập địa chỉ giao hàng
+│   │   ├── Chọn phương thức thanh toán
+│   ├── 1.6 Theo dõi đơn hàng
+│   ├── 1.7 Chat với shop 
+│
+├── 2. SELLER (Người bán)
+│   ├── 2.1 Đăng nhập hệ thống
+│   ├── 2.2 Quản lý sản phẩm
+│   │   ├── Thêm
+│   │   ├── Sửa
+│   │   ├── Xóa
+│   ├── 2.3 Quản lý danh mục
+│   ├── 2.4 Quản lý đơn hàng
+│   │   ├── Xác nhận
+│   │   ├── Đang giao
+│   │   ├── Hoàn thành
+│   ├── 2.5 Quản lý tồn kho
+│   ├── 2.6 Xem doanh thu
+│   ├── 2.7 Tạo khuyến mãi 
+│   ├── 2.8 Chat với khách 
+│
+├── 3. ADMIN
+│   ├── 3.1 Đăng nhập hệ thống
+│   ├── 3.2 Quản lý user
+│   ├── 3.3 Quản lý shop (seller)
+│   │   ├── Tạo tài khoản seller 
+│   │   ├── Cấp quyền / khóa tài khoản
+│   ├── 3.4 Duyệt sản phẩm
+│   ├── 3.5 Quản lý đơn hàng toàn hệ thống
+│
+├── 4. GIAO HÀNG
+│   ├── 4.1 Quản lý trạng thái đơn
+│   │   ├── Chờ xác nhận
+│   │   ├── Đang chuẩn bị
+│   │   ├── Đang giao
+│   │   ├── Đã giao
+│   ├── 4.2 Thông tin giao hàng
+│   │   ├── Địa chỉ
+│   │   ├── SĐT
+│   │   ├── Ghi chú
+│   ├── 4.3 Tính phí vận chuyển (đơn giản)
+│   ├── 4.4 Mock shipper (giả lập giao hàng)
+
+
+
+
+
+
+
+
+Lộ trình làm đồ án
+Phase 1 (Cơ bản):
+Backend: CRUD sản phẩm, user, đơn hàng.
+Frontend: hiển thị sản phẩm, giỏ hàng, đặt hàng.
+Phase 2 (Tương tác nâng cao):
+Chat USER ↔ SELLER.
+Dashboard seller/admin.
+Phase 3 (AI gợi ý):
+Gợi ý sản phẩm dựa trên danh mục / lịch sử mua.
+Nâng cao: mô hình embedding, cosine similarity.
+(scikit-learn / surprise / pandas)
