@@ -1,12 +1,18 @@
 HUONG DAN LAM VIEC THEO NHANH - SMART VISION SHOP
 
-1) CHIEN LUOC NHANH
-- Nhanh on dinh: main
-- Nhanh tong hop noi bo: develop
-- Nhanh chuc nang: feature/<ten-chuc-nang>
-- Nhanh sua loi gap: hotfix/<ten-loi>
+MUC TIEU
+- Lam viec co quy trinh nhu du an that.
+- Moi tinh nang di qua nhanh rieng, co review truoc khi vao nhanh chinh.
+- De truy vet loi de, rollback de, va quan ly tien do de.
 
-2) DANH SACH NHANH CHUC NANG DE XUAT
+1) CHIEN LUOC NHANH
+- Nhanh on dinh production: main
+- Nhanh tong hop de test noi bo: develop
+- Nhanh lam tinh nang: feature/<module>-<chuc-nang>
+- Nhanh sua loi khan cap tu production: hotfix/<van-de>
+- Nhanh sua loi thong thuong: bugfix/<van-de>
+
+2) DANH SACH NHANH CHUC NANG DANG AP DUNG
 - feature/authentication
 - feature/user-shopping
 - feature/seller-management
@@ -17,66 +23,119 @@ HUONG DAN LAM VIEC THEO NHANH - SMART VISION SHOP
 - feature/ui-frontend
 - feature/backend-api
 
-3) QUY TRINH LAM CHUC NANG (NHU DU AN THAT)
-Buoc 1: Chuyen sang develop va cap nhat moi nhat
+3) QUY UOC DAT TEN NHANH
+- feature/<module>-<action>
+  Vi du: feature/user-add-to-cart, feature/admin-approve-product
+- bugfix/<module>-<problem>
+  Vi du: bugfix/cart-total-wrong
+- hotfix/<problem>
+  Vi du: hotfix/payment-timeout
+
+4) QUY TRINH NHAN VIEC -> CODE -> PR -> MERGE
+Buoc 1: Cap nhat nhanh goc
   git checkout develop
   git pull origin develop
 
-Buoc 2: Tao nhanh chuc nang tu develop
-  git checkout -b feature/<ten-chuc-nang>
+Buoc 2: Tao nhanh cho task
+  git checkout -b feature/<module>-<chuc-nang>
 
-Buoc 3: Code + commit nho gon, ro rang
+Buoc 3: Lam viec theo commit nho
   git add .
-  git commit -m "feat(<scope>): mo ta ngan gon"
+  git commit -m "feat(<scope>): <noi-dung-ngan-gon>"
 
 Buoc 4: Day nhanh len remote
-  git push -u origin feature/<ten-chuc-nang>
+  git push -u origin feature/<module>-<chuc-nang>
 
 Buoc 5: Tao Pull Request vao develop
-- Tieu de PR ro rang
-- Mo ta thay doi
-- Dinh kem hinh/test neu co
+- Tieu de ro rang
+- Mo ta: ly do, thay doi chinh, cach test
+- Co hinh/chup man hinh neu thay doi giao dien
 
-Buoc 6: Sau khi merge vao develop
-- Xoa nhanh feature neu khong dung nua:
-  git branch -d feature/<ten-chuc-nang>
-  git push origin --delete feature/<ten-chuc-nang>
+Buoc 6: Sau khi PR duoc merge
+  git checkout develop
+  git pull origin develop
+  git branch -d feature/<module>-<chuc-nang>
+  git push origin --delete feature/<module>-<chuc-nang>
 
-4) QUY TAC DAT TEN COMMIT (GOI Y)
+5) MAU GHI CHU CONG VIEC CHO MOI NHANH
+- Nhanh: feature/<module>-<chuc-nang>
+- Nguoi phu trach: <ten>
+- Muc tieu: <mo ta ngan>
+- Dau viec:
+  [ ] API
+  [ ] UI
+  [ ] Validation
+  [ ] Test
+- Deadline: <ngay>
+- Pull Request: <link>
+- Trang thai: Todo / Doing / Review / Done
+
+6) QUY TAC DAT TEN COMMIT (THEO CONVENTIONAL COMMITS)
 - feat: them tinh nang
 - fix: sua loi
-- refactor: cai to code khong doi nghiep vu
-- chore: viec he thong/tool
+- refactor: toi uu/cai to code khong doi nghiep vu
 - docs: cap nhat tai lieu
+- chore: cau hinh, script, cong cu
+- test: bo sung/chinh sua test
 
-Vi du:
-- feat(auth): them dang nhap JWT
-- fix(cart): sua loi tinh tong tien
-- docs(branching): cap nhat huong dan lam viec theo nhanh
+Vi du commit:
+- feat(auth): add refresh token flow
+- fix(cart): correct item total after coupon apply
+- refactor(api): split order service by domain
+- docs(branching): add pull request checklist
 
-5) NGUYEN TAC KHI LAM VIEC NHOM
-- Khong code truc tiep tren main
-- Main chi nhan code da review
-- Moi chuc nang la 1 nhanh rieng
-- PR nho, de review
-- Luon pull develop moi nhat truoc khi bat dau task moi
+7) CHECKLIST TRUOC KHI PUSH
+- Da pull moi nhat tu develop
+- Chay test/lint/build local khong loi
+- Khong commit file tam, file nhay cam, env
+- Message commit dung quy tac
+- Code thay doi dung pham vi task
 
-6) NHANH KHI GHI CHU CONG VIEC
-Khi bat dau task moi, ghi theo mau:
-- Nhanh: feature/<ten-chuc-nang>
-- Nguoi lam: <ten>
-- Muc tieu: <mo ta ngan>
-- Dau viec chinh:
-  + [ ] Viec 1
-  + [ ] Viec 2
-  + [ ] Viec 3
-- Thoi gian du kien: <ngay>
-- Link PR: <link>
+8) CHECKLIST REVIEW PR
+- Dung nghiep vu va yeu cau task
+- Khong pha vo chuc nang cu
+- Doc duoc, de bao tri
+- Co xu ly loi va thong bao hop ly
+- Co huong test ro rang
 
-7) MO HINH RELEASE DE XUAT
-- Merge feature -> develop (hang ngay)
-- Kiem thu tren develop
-- Chot release: merge develop -> main
-- Gan tag version: v1.0.0, v1.1.0 ...
+9) XU LY CONFLICT NHANH
+Khi nhanh feature bi conflict voi develop:
+  git checkout feature/<module>-<chuc-nang>
+  git fetch origin
+  git rebase origin/develop
 
-Tai lieu nay duoc tao de thong nhat cach lam viec nhu du an production.
+Neu co conflict:
+- Sua conflict trong file
+- git add <file-da-sua>
+- git rebase --continue
+
+Day lai nhanh sau rebase:
+  git push --force-with-lease
+
+10) QUY TRINH RELEASE
+- Hang ngay: merge feature -> develop sau khi review
+- Truoc release: test tong the tren develop
+- Khi release:
+  git checkout main
+  git pull origin main
+  git merge develop
+  git push origin main
+
+Gan tag version:
+  git tag -a v1.0.0 -m "release v1.0.0"
+  git push origin v1.0.0
+
+11) NGUYEN TAC BAT BUOC CHO TEAM
+- Khong push truc tiep vao main
+- Moi chuc nang phai co branch rieng
+- Moi branch phai qua PR truoc khi merge
+- PR nho, ro rang, de review
+- Moi task co ghi chu tien do theo mau muc 5
+
+12) GOI Y PHAN CHIA TEAM (THAM KHAO)
+- Nhom Auth + User: feature/authentication, feature/user-shopping
+- Nhom Seller + Admin: feature/seller-management, feature/admin-management
+- Nhom Delivery + Payment: feature/delivery-tracking, feature/payment-checkout
+- Nhom He thong: feature/realtime-chat, feature/backend-api, feature/ui-frontend
+
+Tai lieu nay la chuan lam viec cho ca nhom trong suot qua trinh phat trien.
