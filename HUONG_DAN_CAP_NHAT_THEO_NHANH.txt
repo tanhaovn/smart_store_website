@@ -138,4 +138,78 @@ Gan tag version:
 - Nhom Delivery + Payment: feature/delivery-tracking, feature/payment-checkout
 - Nhom He thong: feature/realtime-chat, feature/backend-api, feature/ui-frontend
 
+13) BO LENH GIT DUNG HANG NGAY (COPY LA CHAY)
+
+A. Lan dau clone du an ve may
+  git clone https://github.com/tanhaovn/smart_store_website.git
+  cd smart_store_website
+  git checkout develop
+  git pull origin develop
+
+B. Bat dau mot task moi
+  git checkout develop
+  git pull origin develop
+  git checkout -b feature/user-add-to-cart
+
+C. Commit code trong ngay
+  git status
+  git add .
+  git commit -m "feat(cart): add api add-to-cart"
+
+D. Day nhanh len GitHub
+  git push -u origin feature/user-add-to-cart
+
+E. Cap nhat nhanh feature theo develop moi nhat
+  git checkout feature/user-add-to-cart
+  git fetch origin
+  git rebase origin/develop
+  git push --force-with-lease
+
+F. Ket thuc task sau khi merge PR
+  git checkout develop
+  git pull origin develop
+  git branch -d feature/user-add-to-cart
+  git push origin --delete feature/user-add-to-cart
+
+G. Tao nhanh bugfix
+  git checkout develop
+  git pull origin develop
+  git checkout -b bugfix/cart-total-wrong
+
+H. Tao nhanh hotfix tu main (loi production)
+  git checkout main
+  git pull origin main
+  git checkout -b hotfix/payment-timeout
+
+I. Kiem tra nhanh tinh trang repo
+  git status -sb
+  git branch -a
+  git log --oneline -10
+
+K. Neu commit nham message (chua push)
+  git commit --amend -m "fix(cart): recalculate total after coupon"
+
+L. Neu add nham file vao staging
+  git restore --staged <ten-file>
+
+M. Cat tam viec dang lam de chuyen task
+  git stash push -m "wip cart feature"
+  git checkout develop
+  git stash list
+  git stash pop
+
+N. Tao release va tag
+  git checkout main
+  git pull origin main
+  git merge develop
+  git push origin main
+  git tag -a v1.0.0 -m "release v1.0.0"
+  git push origin v1.0.0
+
+O. Dong bo main vao develop sau release
+  git checkout develop
+  git pull origin develop
+  git merge main
+  git push origin develop
+
 Tai lieu nay la chuan lam viec cho ca nhom trong suot qua trinh phat trien.
