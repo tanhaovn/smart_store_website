@@ -16,6 +16,21 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class RegistrationOtp(db.Model):
+    __tablename__ = "registration_otps"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False, index=True)
+    full_name = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(20))
+    password_hash = db.Column(db.String(255), nullable=False)
+    otp_hash = db.Column(db.String(255), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    is_used = db.Column(db.Boolean, nullable=False, default=False)
+    used_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class Category(db.Model):
     __tablename__ = "categories"
 

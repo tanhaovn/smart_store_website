@@ -52,11 +52,6 @@
 
 
 
-
-
-
-
-
 Lộ trình làm đồ án
 Phase 1 (Cơ bản):
 Backend: CRUD sản phẩm, user, đơn hàng.

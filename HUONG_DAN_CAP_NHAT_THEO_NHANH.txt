@@ -211,5 +211,3 @@ O. Dong bo main vao develop sau release
   git pull origin develop
   git merge main
   git push origin develop
-
-Tai lieu nay la chuan lam viec cho ca nhom trong suot qua trinh phat trien.
