@@ -40,7 +40,7 @@ export default function RegisterPage() {
         phone: registerForm.phone,
         password: registerForm.password,
       };
-      const data = await requestRegisterOtp(payload);
+      await requestRegisterOtp(payload);
       setOtpSent(true);
       setNotice(
         `OTP da duoc gui toi so ${registerForm.phone}. Vui long nhap OTP de hoan tat.`,
@@ -76,10 +76,23 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="auth-page">
-      <section className="auth-card">
-        <h1>Smart Vision Shop</h1>
-        <p className="subtitle">Dang ky tai khoan khach hang bang OTP</p>
+    <main className="min-h-screen px-4 py-10 md:px-6">
+      <section className="mx-auto w-full max-w-2xl rounded-3xl border border-teal-100 bg-white/90 p-6 shadow-xl backdrop-blur md:p-8">
+        <h1 className="text-2xl font-extrabold text-teal-900 md:text-3xl">
+          Smart Vision Shop
+        </h1>
+        <p className="mt-2 text-sm text-teal-700">
+          Dang ky tai khoan khach hang bang OTP
+        </p>
+        <div className="mt-4 rounded-2xl border border-teal-100 bg-linear-to-r from-teal-50 to-emerald-50 p-4">
+          <p className="text-sm font-semibold text-teal-900">
+            Luu y phan quyen
+          </p>
+          <p className="mt-1 text-sm text-teal-700">
+            Dang ky tao tai khoan nguoi mua (USER). Tai khoan ADMIN, SELLER va
+            DELIVERY duoc cap boi quan tri he thong.
+          </p>
+        </div>
 
         <RegisterForm
           loading={loading}
@@ -98,11 +111,21 @@ export default function RegisterPage() {
           onVerifyOtp={onVerifyOtp}
         />
 
-        <p className="auth-switch">
-          Da co tai khoan? <Link to="/login">Dang nhap</Link>
+        <p className="mt-4 text-sm text-slate-600">
+          Da co tai khoan?{" "}
+          <Link
+            className="font-semibold text-teal-600 hover:text-teal-700"
+            to="/login"
+          >
+            Dang nhap
+          </Link>
         </p>
 
-        {notice && <p className="notice">{notice}</p>}
+        {notice && (
+          <p className="mt-4 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-800">
+            {notice}
+          </p>
+        )}
       </section>
     </main>
   );

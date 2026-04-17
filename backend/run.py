@@ -14,16 +14,26 @@ app = create_app()
 
 
 KEYWORD_IMAGE_QUERIES = [
-    ("tai nghe", "headphones"),
-    ("ao", "tshirt fashion"),
-    ("ban phim", "mechanical keyboard"),
-    ("chuot", "computer mouse"),
-    ("noi chien", "air fryer"),
-    ("sach", "book cover"),
-    ("sua rua mat", "face wash bottle"),
-    ("binh giu nhiet", "thermos bottle"),
-    ("den ban", "desk lamp"),
-    ("may xay", "blender"),
+    ("rau", "fresh vegetables"),
+    ("cu", "root vegetables"),
+    ("qua", "fresh fruits"),
+    ("trai cay", "fresh fruits"),
+    ("thit", "fresh meat"),
+    ("ca", "fresh fish market"),
+    ("tom", "fresh shrimp"),
+    ("trung", "eggs tray"),
+    ("gao", "rice bag"),
+    ("mi", "instant noodles"),
+    ("nuoc mam", "fish sauce bottle"),
+    ("nuoc tuong", "soy sauce bottle"),
+    ("dau an", "cooking oil bottle"),
+    ("duong", "sugar pack"),
+    ("muoi", "salt package"),
+    ("sua", "milk carton"),
+    ("banh", "snack package"),
+    ("bot giat", "laundry detergent"),
+    ("nuoc rua chen", "dish soap"),
+    ("khau trang", "face mask"),
 ]
 
 
@@ -88,6 +98,25 @@ def seed_accounts_impl():
     print("Seed accounts done.")
 
 
+def reset_commerce_data_impl():
+    # Keep user accounts, only clear transactional/catalog data.
+    db.session.query(ChatMessage).delete()
+    db.session.query(DeliveryAssignment).delete()
+    db.session.query(OrderItem).delete()
+    db.session.query(Order).delete()
+    db.session.query(Cart).delete()
+    db.session.query(Promotion).delete()
+    db.session.query(Product).delete()
+    db.session.query(Category).delete()
+    db.session.commit()
+
+
+@app.cli.command("reset-commerce-data")
+def reset_commerce_data():
+    reset_commerce_data_impl()
+    print("Reset commerce data done.")
+
+
 @app.cli.command("seed-demo-data")
 def seed_demo_data():
     seller_email = "seller1@smartstore.local"
@@ -119,7 +148,14 @@ def seed_demo_data():
         db.session.add(user)
         db.session.flush()
 
-    category_names = ["Dien tu", "Thoi trang"]
+    category_names = [
+        "Rau cu - trai cay",
+        "Thit ca - hai san",
+        "Trung - sua",
+        "Gao - mi - do kho",
+        "Gia vi - nuoc cham",
+        "Do dung gia dinh",
+    ]
     categories = {}
     for category_name in category_names:
         category = Category.query.filter_by(name=category_name).first()
@@ -131,18 +167,46 @@ def seed_demo_data():
 
     products_seed = [
         {
-            "name": "Tai nghe Bluetooth",
-            "price": 450000,
-            "stock": 30,
-            "category": "Dien tu",
-            "image_url": "https://picsum.photos/seed/tai-nghe/800/800",
+            "name": "Rau cai xanh huu co 500g",
+            "price": 22000,
+            "stock": 120,
+            "category": "Rau cu - trai cay",
+            "image_url": "https://picsum.photos/seed/rau-cai-xanh/800/800",
         },
         {
-            "name": "Ao thun basic",
-            "price": 180000,
-            "stock": 50,
-            "category": "Thoi trang",
-            "image_url": "https://picsum.photos/seed/ao-thun/800/800",
+            "name": "Thit ba chi heo 500g",
+            "price": 89000,
+            "stock": 80,
+            "category": "Thit ca - hai san",
+            "image_url": "https://picsum.photos/seed/thit-ba-chi/800/800",
+        },
+        {
+            "name": "Trung ga ta hop 10 qua",
+            "price": 35000,
+            "stock": 100,
+            "category": "Trung - sua",
+            "image_url": "https://picsum.photos/seed/trung-ga/800/800",
+        },
+        {
+            "name": "Gao ST25 tui 5kg",
+            "price": 185000,
+            "stock": 60,
+            "category": "Gao - mi - do kho",
+            "image_url": "https://picsum.photos/seed/gao-st25/800/800",
+        },
+        {
+            "name": "Nuoc mam truyen thong 500ml",
+            "price": 42000,
+            "stock": 90,
+            "category": "Gia vi - nuoc cham",
+            "image_url": "https://picsum.photos/seed/nuoc-mam/800/800",
+        },
+        {
+            "name": "Nuoc rua chen chanh 750ml",
+            "price": 28000,
+            "stock": 70,
+            "category": "Do dung gia dinh",
+            "image_url": "https://picsum.photos/seed/nuoc-rua-chen/800/800",
         },
     ]
 
@@ -170,20 +234,21 @@ def seed_demo_data():
 
     existing_cart = Cart.query.filter_by(user_id=user.id).all()
     if not existing_cart:
-        db.session.add(Cart(user_id=user.id, product_id=product_rows[0].id, quantity=1))
+        db.session.add(Cart(user_id=user.id, product_id=product_rows[0].id, quantity=2))
+        db.session.add(Cart(user_id=user.id, product_id=product_rows[2].id, quantity=1))
 
     demo_order = Order.query.filter_by(user_id=user.id, seller_id=seller.id).first()
     if not demo_order:
-        total_amount = product_rows[0].price
+        total_amount = (product_rows[0].price * 2) + product_rows[1].price
         demo_order = Order(
             user_id=user.id,
             seller_id=seller.id,
             total_amount=total_amount,
             shipping_fee=15000,
             payment_method="COD",
-            shipping_address="123 Demo Street, HCM",
+            shipping_address="45 Nguyen Van Linh, Q7, TP.HCM",
             shipping_phone="0933333333",
-            note="Don demo",
+            note="Nho giao truoc 18h, goi truoc khi giao",
             status="CHO_XAC_NHAN",
         )
         db.session.add(demo_order)
@@ -193,8 +258,16 @@ def seed_demo_data():
             OrderItem(
                 order_id=demo_order.id,
                 product_id=product_rows[0].id,
-                quantity=1,
+                quantity=2,
                 unit_price=product_rows[0].price,
+            )
+        )
+        db.session.add(
+            OrderItem(
+                order_id=demo_order.id,
+                product_id=product_rows[1].id,
+                quantity=1,
+                unit_price=product_rows[1].price,
             )
         )
 
@@ -205,7 +278,7 @@ def seed_demo_data():
                 sender_id=user.id,
                 receiver_id=seller.id,
                 order_id=demo_order.id if demo_order else None,
-                message="Shop oi, cho minh hoi them ve san pham nha.",
+                message="Shop oi, rau nay minh lay loai non giup nhe.",
             )
         )
 
@@ -219,12 +292,16 @@ def seed_realistic_data_impl(users: int, sellers: int, products: int, orders: in
     seed_accounts_impl()
 
     categories_seed = [
-        ("Dien tu", "Do cong nghe va thiet bi thong minh"),
-        ("Thoi trang", "Quan ao va phu kien"),
-        ("Gia dung", "Vat dung nha bep, nha cua"),
-        ("Suc khoe", "Cham soc ca nhan"),
-        ("Me va be", "Do dung cho me va be"),
-        ("Sach", "Sach va van phong pham"),
+        ("Rau cu", "Rau la, cu qua tuoi moi ngay"),
+        ("Trai cay", "Trai cay trong nuoc va nhap khau"),
+        ("Thit heo bo ga", "Thit tuoi da qua kiem dinh"),
+        ("Hai san", "Ca, tom, muc va do dong lanh"),
+        ("Trung - sua", "Trung gia cam, sua tuoi va sua hop"),
+        ("Gao - mi - ngu coc", "Gao, mi goi, bun, pho kho"),
+        ("Gia vi", "Nuoc mam, nuoc tuong, dau an, duong, muoi"),
+        ("Do hop - do kho", "Ca hop, hat, trai cay say, do kho"),
+        ("Do uong", "Nuoc suoi, nuoc ngot, sua hat"),
+        ("Ve sinh nha cua", "Nuoc rua chen, bot giat, lau san"),
     ]
     categories = []
     for name, description in categories_seed:
@@ -283,26 +360,36 @@ def seed_realistic_data_impl(users: int, sellers: int, products: int, orders: in
         return
 
     product_prefixes = [
-        "Premium",
-        "Smart",
-        "Classic",
-        "Eco",
-        "Mini",
-        "Pro",
-        "Plus",
-        "Luxury",
+        "Tuoi ngon",
+        "Loai 1",
+        "Nong trai",
+        "An toan",
+        "Tiet kiem",
+        "Gia tot",
+        "Thuong hang",
+        "Huu co",
     ]
     product_nouns = [
-        "Tai nghe",
-        "Ban phim",
-        "Chuot",
-        "Ao khoac",
-        "Noi chien",
-        "Sach ky nang",
-        "Sua rua mat",
-        "Binh giu nhiet",
-        "Den ban",
-        "May xay mini",
+        "Rau muong 500g",
+        "Ca rot Da Lat 1kg",
+        "Chuoi cau 1kg",
+        "Tao Gala 1kg",
+        "Thit heo xay 500g",
+        "Uc ga phi le 500g",
+        "Ca basa cat khuc 500g",
+        "Tom the 300g",
+        "Trung ga hop 10 qua",
+        "Sua tuoi khong duong 1L",
+        "Gao ST25 5kg",
+        "Mi goi tom chua cay goi",
+        "Nuoc mam 500ml",
+        "Nuoc tuong 500ml",
+        "Dau an 1L",
+        "Duong cat 1kg",
+        "Muoi iot 500g",
+        "Ca hop sot ca",
+        "Nuoc rua chen 750ml",
+        "Bot giat 3kg",
     ]
 
     for idx in range(products):
@@ -312,9 +399,9 @@ def seed_realistic_data_impl(users: int, sellers: int, products: int, orders: in
         product = Product(
             name=name,
             image_url=build_product_image_url(name),
-            description=f"{name} - {fake.sentence(nb_words=10)}",
-            price=random.randint(50000, 2500000),
-            stock=random.randint(5, 200),
+            description=f"{name} - Hang phuc vu nhu cau di cho hang ngay.",
+            price=random.randint(8000, 240000),
+            stock=random.randint(10, 300),
             seller_id=seller.id,
             category_id=category.id,
             is_approved=True,
@@ -396,12 +483,12 @@ def seed_realistic_data_impl(users: int, sellers: int, products: int, orders: in
             )
 
     sample_messages = [
-        "Shop oi, san pham nay con mau den khong?",
-        "Cho minh xin them anh that duoc khong?",
-        "Don nay du kien giao khi nao vay shop?",
-        "Minh dat 2 cai co du hang khong?",
-        "Shop goi hang ky giup minh nhe.",
-        "Cam on shop, minh da nhan duoc hang roi.",
+        "Shop oi, rau nay hom nay moi cat khong a?",
+        "Cho minh xin giao trong khung 16h-18h nhe.",
+        "Tom nay con tuoi khong shop?",
+        "Neu het hang thi doi qua loai tuong duong giup minh.",
+        "Nho dong goi ky trung va trai cay giup minh nhe.",
+        "Cam on shop, hang tuoi va dong goi rat gon.",
     ]
     for _ in range(chats):
         user = random.choice(all_users)

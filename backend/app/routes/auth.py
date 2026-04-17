@@ -297,3 +297,19 @@ def admin_login():
         return {"error": "Admin account is locked"}, 403
 
     return _build_auth_response(user)
+
+
+@auth_bp.post("/delivery-login")
+def delivery_login():
+    data = get_json_body()
+    require_fields(data, ["email", "password"])
+    email = str(data.get("email", "")).strip().lower()
+    password = str(data.get("password", ""))
+
+    user = User.query.filter_by(email=email, role="DELIVERY").first()
+    if not user or not check_password(password, user.password_hash):
+        return {"error": "Invalid delivery credentials"}, 401
+    if not user.is_active:
+        return {"error": "Delivery account is locked"}, 403
+
+    return _build_auth_response(user)

@@ -33,19 +33,11 @@ function RequireRole({ roles, children }) {
 }
 
 function GuestOnlyRoute({ children }) {
-  const { isAuthenticated } = useAuth();
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
   return children;
 }
 
 function HomeRedirect() {
-  const { isAuthenticated, user } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  return <Navigate to={getHomePathForRole(user?.role)} replace />;
+  return <Navigate to="/login" replace />;
 }
 
 export default function AuthRoutes() {

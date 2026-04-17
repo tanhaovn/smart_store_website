@@ -11,11 +11,12 @@ export default function RegisterForm({
 }) {
   return (
     <>
-      <form onSubmit={onSendOtp} className="auth-form">
-        <label>
-          Ho va ten
+      <form onSubmit={onSendOtp} className="space-y-4">
+        <label className="block space-y-2">
+          <span className="text-sm font-semibold text-teal-800">Ho va ten</span>
           <input
             type="text"
+            className="w-full rounded-xl border border-teal-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
             value={registerForm.full_name}
             onChange={(event) =>
               onRegisterFieldChange("full_name", event.target.value)
@@ -23,10 +24,11 @@ export default function RegisterForm({
             required
           />
         </label>
-        <label>
-          Email
+        <label className="block space-y-2">
+          <span className="text-sm font-semibold text-teal-800">Email</span>
           <input
             type="email"
+            className="w-full rounded-xl border border-teal-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
             value={registerForm.email}
             onChange={(event) =>
               onRegisterFieldChange("email", event.target.value)
@@ -34,20 +36,26 @@ export default function RegisterForm({
             required
           />
         </label>
-        <label>
-          So dien thoai
+        <label className="block space-y-2">
+          <span className="text-sm font-semibold text-teal-800">
+            So dien thoai
+          </span>
           <input
             type="tel"
+            className="w-full rounded-xl border border-teal-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
             value={registerForm.phone}
             onChange={(event) =>
               onRegisterFieldChange("phone", event.target.value)
             }
           />
         </label>
-        <label>
-          Mat khau (toi thieu 8 ky tu)
+        <label className="block space-y-2">
+          <span className="text-sm font-semibold text-teal-800">
+            Mat khau (toi thieu 8 ky tu)
+          </span>
           <input
             type="password"
+            className="w-full rounded-xl border border-teal-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
             value={registerForm.password}
             onChange={(event) =>
               onRegisterFieldChange("password", event.target.value)
@@ -58,18 +66,24 @@ export default function RegisterForm({
         <button
           disabled={loading || !canSendOtp}
           type="submit"
-          className="primary-btn"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-200 transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Dang gui OTP..." : "Gui OTP"}
         </button>
       </form>
 
       {otpSent && (
-        <form onSubmit={onVerifyOtp} className="auth-form otp-form">
-          <label>
-            Nhap OTP da gui ve so dien thoai
+        <form
+          onSubmit={onVerifyOtp}
+          className="mt-4 space-y-4 rounded-2xl border border-teal-100 bg-teal-50/80 p-4"
+        >
+          <label className="block space-y-2">
+            <span className="text-sm font-semibold text-teal-800">
+              Nhap OTP da gui ve so dien thoai
+            </span>
             <input
               type="text"
+              className="w-full rounded-xl border border-teal-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
               value={otpCode}
               onChange={(event) => onOtpCodeChange(event.target.value)}
               maxLength={6}
@@ -79,7 +93,7 @@ export default function RegisterForm({
           <button
             disabled={loading || otpCode.trim().length !== 6}
             type="submit"
-            className="primary-btn"
+            className="inline-flex w-full items-center justify-center rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-200 transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Dang xac thuc..." : "Xac thuc OTP va Dang ky"}
           </button>

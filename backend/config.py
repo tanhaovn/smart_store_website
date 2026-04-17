@@ -29,3 +29,8 @@ class Config:
     TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
     TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
     TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", "")
+    QR_BANK_BIN = os.getenv("QR_BANK_BIN", "970422")
+    QR_ACCOUNT_NO = os.getenv("QR_ACCOUNT_NO", "0933333333")
+    QR_ACCOUNT_NAME = os.getenv("QR_ACCOUNT_NAME", "SMART VISION SHOP")
+    QR_TEMPLATE = os.getenv("QR_TEMPLATE", "compact2")
+    MOMO_PHONE = os.getenv("MOMO_PHONE", "0933333333")

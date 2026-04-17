@@ -10,7 +10,7 @@
 │   │   ├── Nhập địa chỉ giao hàng
 │   │   ├── Chọn phương thức thanh toán
 │   ├── 1.6 Theo dõi đơn hàng
-│   ├── 1.7 Chat với shop 
+│   ├── 1.7 Chat với shop ✔
 │
 ├── 2. SELLER (Người bán)
 │   ├── 2.1 Đăng nhập hệ thống
@@ -26,7 +26,7 @@
 │   ├── 2.5 Quản lý tồn kho
 │   ├── 2.6 Xem doanh thu
 │   ├── 2.7 Tạo khuyến mãi 
-│   ├── 2.8 Chat với khách 
+│   ├── 2.8 Chat với khách ✔
 │
 ├── 3. ADMIN
 │   ├── 3.1 Đăng nhập hệ thống
@@ -50,6 +50,23 @@
 │   ├── 4.3 Tính phí vận chuyển (đơn giản)
 │   ├── 4.4 Mock shipper (giả lập giao hàng)
 
+
+account:
+USER
+Email: user1@smartstore.local
+Password: Hao@1909
+
+SELLER
+Email: seller1@smartstore.local
+Password: Hao@1909
+
+DELIVERY
+Email: delivery@smartstore.local
+Password: Hao@1909
+
+ADMIN
+Email: admin@smartstore.local
+Password: Hao@1909
 
 
 Lộ trình làm đồ án

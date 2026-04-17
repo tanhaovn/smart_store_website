@@ -204,8 +204,13 @@ def seller_orders():
 def update_order_status(order_id: int):
     data = get_json_body()
     require_fields(data, ["status"])
-    status = str(data.get("status", "")).strip().upper()
-    allowed = {"XAC_NHAN", "DANG_CHUAN_BI", "DANG_GIAO", "HOAN_THANH"}
+    raw_status = str(data.get("status", "")).strip().upper()
+    aliases = {
+        "XAC_NHAN": "DANG_CHUAN_BI",
+        "HOAN_THANH": "DA_GIAO",
+    }
+    status = aliases.get(raw_status, raw_status)
+    allowed = {"CHO_XAC_NHAN", "DANG_CHUAN_BI", "DANG_GIAO", "DA_GIAO"}
     if status not in allowed:
         return {"error": f"status must be one of {sorted(allowed)}"}, 400
 
@@ -229,7 +234,11 @@ def update_inventory(product_id: int):
 @seller_bp.get("/revenue")
 @auth_required(["SELLER"])
 def revenue_summary():
-    completed_orders = Order.query.filter_by(seller_id=g.current_user_id, status="HOAN_THANH").all()
+    completed_orders = (
+        Order.query.filter(Order.seller_id == g.current_user_id, Order.status.in_(["DA_GIAO", "HOAN_THANH"]))
+        .order_by(Order.id.desc())
+        .all()
+    )
     total_revenue = sum(o.total_amount for o in completed_orders)
     return {"total_revenue": total_revenue, "completed_orders": len(completed_orders)}, 200
 
@@ -294,6 +303,72 @@ def seller_chat():
     )
     db.session.commit()
     return {"message": "Message sent"}, 201
+
+
+@seller_bp.get("/chat-users")
+@auth_required(["SELLER"])
+def seller_chat_users():
+    seller_id = g.current_user_id
+
+    ordered_user_ids = {
+        row[0]
+        for row in db.session.query(Order.user_id)
+        .filter(Order.seller_id == seller_id)
+        .distinct()
+        .all()
+        if row[0] is not None
+    }
+
+    incoming_user_ids = {
+        row[0]
+        for row in db.session.query(ChatMessage.sender_id)
+        .filter(ChatMessage.receiver_id == seller_id)
+        .distinct()
+        .all()
+        if row[0] is not None
+    }
+
+    outgoing_user_ids = {
+        row[0]
+        for row in db.session.query(ChatMessage.receiver_id)
+        .filter(ChatMessage.sender_id == seller_id)
+        .distinct()
+        .all()
+        if row[0] is not None
+    }
+
+    user_ids = ordered_user_ids | incoming_user_ids | outgoing_user_ids
+    if not user_ids:
+        return {"items": []}, 200
+
+    users = (
+        User.query.filter(User.id.in_(user_ids), User.role == "USER")
+        .order_by(User.full_name.asc(), User.id.asc())
+        .all()
+    )
+
+    latest_order_by_user = {}
+    orders = (
+        Order.query.filter(Order.seller_id == seller_id, Order.user_id.in_(user_ids))
+        .order_by(Order.id.desc())
+        .all()
+    )
+    for order in orders:
+        if order.user_id not in latest_order_by_user:
+            latest_order_by_user[order.user_id] = order.id
+
+    return {
+        "items": [
+            {
+                "id": user.id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "phone": user.phone,
+                "latest_order_id": latest_order_by_user.get(user.id),
+            }
+            for user in users
+        ]
+    }, 200
 
 
 @seller_bp.get("/chat/<int:user_id>")

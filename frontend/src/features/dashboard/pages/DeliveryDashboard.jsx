@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../DashboardLayout";
 import { apiGet, apiPatch, apiPost } from "../../../services/http";
-import { formatMoney, safeItems } from "../dashboardUtils";
+import { formatDateTime, formatMoney, safeItems } from "../dashboardUtils";
+import { useAuth } from "../../auth/useAuth";
 
 export default function DeliveryDashboard() {
+  const { user } = useAuth();
   const [assignments, setAssignments] = useState([]);
   const [shippingFee, setShippingFee] = useState(null);
   const [notice, setNotice] = useState("");
+  const [chatPeers, setChatPeers] = useState([]);
+  const [selectedChatKey, setSelectedChatKey] = useState("");
+  const [chatMessages, setChatMessages] = useState([]);
   const [feeForm, setFeeForm] = useState({ distance_km: 0, weight_kg: 0 });
   const [statusByOrderId, setStatusByOrderId] = useState({});
   const [infoForm, setInfoForm] = useState({
@@ -19,15 +24,64 @@ export default function DeliveryDashboard() {
     shipper_id: "",
   });
   const [infoOrderId, setInfoOrderId] = useState("");
+  const [chatForm, setChatForm] = useState({ message: "" });
+
+  const selectedChatThread = useMemo(
+    () => chatPeers.find((thread) => thread.key === selectedChatKey) || null,
+    [chatPeers, selectedChatKey],
+  );
 
   async function refreshAll() {
     const data = await apiGet("/api/delivery/orders");
     setAssignments(safeItems(data.items));
   }
 
+  const loadChatPeers = async () => {
+    const data = await apiGet("/api/delivery/chat-peers");
+    setChatPeers(safeItems(data.items));
+  };
+
   useEffect(() => {
-    refreshAll().catch((error) => setNotice(error.message));
-  }, []);
+    if (user?.role !== "DELIVERY") {
+      setChatPeers([]);
+      setSelectedChatKey("");
+      setChatMessages([]);
+      refreshAll().catch((error) => setNotice(error.message));
+      return;
+    }
+
+    Promise.all([refreshAll(), loadChatPeers()]).catch((error) =>
+      setNotice(error.message),
+    );
+  }, [user?.role]);
+
+  useEffect(() => {
+    if (!chatPeers.length) {
+      setSelectedChatKey("");
+      setChatMessages([]);
+      return;
+    }
+
+    if (
+      !selectedChatKey ||
+      !chatPeers.some((thread) => thread.key === selectedChatKey)
+    ) {
+      setSelectedChatKey(chatPeers[0].key);
+    }
+  }, [chatPeers, selectedChatKey]);
+
+  useEffect(() => {
+    if (!selectedChatThread) {
+      setChatMessages([]);
+      return;
+    }
+
+    apiGet(
+      `/api/delivery/chat/${selectedChatThread.peer_id}?order_id=${selectedChatThread.order_id}`,
+    )
+      .then((data) => setChatMessages(safeItems(data.items)))
+      .catch((error) => setNotice(error.message));
+  }, [selectedChatThread]);
 
   const onCalculateFee = async (event) => {
     event.preventDefault();
@@ -82,6 +136,29 @@ export default function DeliveryDashboard() {
     try {
       await apiPost(`/api/delivery/mock-shipper/${orderId}/next`, {});
       await refreshAll();
+    } catch (error) {
+      setNotice(error.message);
+    }
+  };
+
+  const onSendChat = async (event) => {
+    event.preventDefault();
+    if (!selectedChatThread) {
+      setNotice("Hay chon mot don hang truoc khi gui chat");
+      return;
+    }
+
+    try {
+      await apiPost("/api/delivery/chat", {
+        user_id: Number(selectedChatThread.peer_id),
+        order_id: Number(selectedChatThread.order_id),
+        message: chatForm.message,
+      });
+      setChatForm({ message: "" });
+      const data = await apiGet(
+        `/api/delivery/chat/${selectedChatThread.peer_id}?order_id=${selectedChatThread.order_id}`,
+      );
+      setChatMessages(safeItems(data.items));
     } catch (error) {
       setNotice(error.message);
     }
@@ -346,6 +423,135 @@ export default function DeliveryDashboard() {
           </div>
         </form>
       </section>
+
+      {user?.role === "DELIVERY" && (
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>Chat voi khach</h2>
+              <p>
+                Chon don hang trong danh sach de mo dung cuoc tro chuyen voi
+                khach.
+              </p>
+            </div>
+          </div>
+
+          <div className="chat-panel" style={{ marginBottom: 14 }}>
+            <div className="chat-rail">
+              <div className="chat-rail-head">
+                <div>
+                  <div className="small-text">Don dang giao</div>
+                  <strong>{chatPeers.length} thread</strong>
+                </div>
+                <span className="section-meta">Customer chat</span>
+              </div>
+
+              <div className="chat-thread-list">
+                {chatPeers.map((thread) => {
+                  const isActive = selectedChatKey === thread.key;
+                  return (
+                    <button
+                      key={thread.key}
+                      type="button"
+                      className={`chat-thread-card ${isActive ? "is-active" : ""}`}
+                      onClick={() => setSelectedChatKey(thread.key)}
+                    >
+                      <div className="chat-thread-top">
+                        <div>
+                          <div className="chat-thread-badge">Khach hang</div>
+                          <h3 className="chat-thread-title">{thread.label}</h3>
+                        </div>
+                        <span className="section-meta">#{thread.order_id}</span>
+                      </div>
+                      <div className="chat-thread-subtitle">
+                        {thread.subtitle}
+                      </div>
+                      <div className="chat-thread-meta">
+                        <span>Mo chat theo don</span>
+                        <span>{isActive ? "Dang mo" : "Chon de xem"}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="chat-stage">
+              <div className="chat-stage-head">
+                {selectedChatThread ? (
+                  <>
+                    <div className="small-text">
+                      Don hang #{selectedChatThread.order_id}
+                    </div>
+                    <h3>{selectedChatThread.label}</h3>
+                    <p>{selectedChatThread.subtitle}</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="small-text">Chua chon thread</div>
+                    <h3>Chon don hang ben trai</h3>
+                    <p>Moi tin nhan se duoc giu theo dung order.</p>
+                  </>
+                )}
+              </div>
+
+              <div className="notice">
+                {selectedChatThread
+                  ? "Chat nay gan voi khach cua don nay, khong can nhap ID thu cong."
+                  : "Hay chon don hang truoc khi gui chat."}
+              </div>
+
+              <form className="chat-composer" onSubmit={onSendChat}>
+                <label className="field-label">
+                  Noi dung chat
+                  <textarea
+                    className="field-textarea"
+                    value={chatForm.message}
+                    onChange={(event) =>
+                      setChatForm((prev) => ({
+                        ...prev,
+                        message: event.target.value,
+                      }))
+                    }
+                    placeholder="Thong bao thoi gian giao hang, lien he khach, ..."
+                    required
+                  />
+                </label>
+                <button className="primary-btn" type="submit">
+                  Gui chat
+                </button>
+              </form>
+
+              <div className="chat-thread">
+                {selectedChatThread && chatMessages.length ? (
+                  chatMessages.map((message) => (
+                    <article
+                      key={message.id}
+                      className={`chat-bubble ${
+                        Number(message.sender_id) === Number(user?.id)
+                          ? "me"
+                          : "them"
+                      }`}
+                    >
+                      <div className="small-text">
+                        {Number(message.sender_id) === Number(user?.id)
+                          ? "Ban"
+                          : "Khach"}
+                      </div>
+                      <p>{message.message}</p>
+                      <span>{formatDateTime(message.created_at)}</span>
+                    </article>
+                  ))
+                ) : selectedChatThread ? (
+                  <p className="muted">Chua co noi dung chat nao.</p>
+                ) : (
+                  <p className="muted">Hay chon don hang truoc khi gui chat.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
     </DashboardLayout>
   );
 }
