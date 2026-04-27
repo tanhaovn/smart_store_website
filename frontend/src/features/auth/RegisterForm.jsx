@@ -13,7 +13,7 @@ export default function RegisterForm({
     <>
       <form onSubmit={onSendOtp} className="space-y-4">
         <label className="block space-y-2">
-          <span className="text-sm font-semibold text-teal-800">Ho va ten</span>
+          <span className="text-sm font-semibold text-teal-800">Họ và tên</span>
           <input
             type="text"
             className="w-full rounded-xl border border-teal-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
@@ -38,7 +38,7 @@ export default function RegisterForm({
         </label>
         <label className="block space-y-2">
           <span className="text-sm font-semibold text-teal-800">
-            So dien thoai
+            Số điện thoại
           </span>
           <input
             type="tel"
@@ -51,7 +51,7 @@ export default function RegisterForm({
         </label>
         <label className="block space-y-2">
           <span className="text-sm font-semibold text-teal-800">
-            Mat khau (toi thieu 8 ky tu)
+            Mật khẩu (tối thiểu 8 ký tự)
           </span>
           <input
             type="password"
@@ -68,7 +68,7 @@ export default function RegisterForm({
           type="submit"
           className="inline-flex w-full items-center justify-center rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-200 transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Dang gui OTP..." : "Gui OTP"}
+          {loading ? "Đang gửi OTP..." : "Gửi OTP"}
         </button>
       </form>
 
@@ -79,7 +79,7 @@ export default function RegisterForm({
         >
           <label className="block space-y-2">
             <span className="text-sm font-semibold text-teal-800">
-              Nhap OTP da gui ve so dien thoai
+              Nhập OTP đã gửi về số điện thoại
             </span>
             <input
               type="text"
@@ -95,7 +95,7 @@ export default function RegisterForm({
             type="submit"
             className="inline-flex w-full items-center justify-center rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-200 transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Dang xac thuc..." : "Xac thuc OTP va Dang ky"}
+            {loading ? "Đang xác thực..." : "Xác thực OTP và Đăng ký"}
           </button>
         </form>
       )}

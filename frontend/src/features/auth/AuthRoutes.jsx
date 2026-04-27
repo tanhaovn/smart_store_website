@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import { getHomePathForRole } from "./routing";
 import UserDashboard from "../../features/dashboard/pages/UserDashboard";
+import UserOrdersChatPage from "../../features/dashboard/pages/UserOrdersChatPage";
 import SellerDashboard from "../../features/dashboard/pages/SellerDashboard";
 import AdminDashboard from "../../features/dashboard/pages/AdminDashboard";
 import DeliveryDashboard from "../../features/dashboard/pages/DeliveryDashboard";
@@ -72,6 +73,14 @@ export default function AuthRoutes() {
         element={
           <RequireRole roles={["USER"]}>
             <UserDashboard />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/user/orders-chat"
+        element={
+          <RequireRole roles={["USER"]}>
+            <UserOrdersChatPage />
           </RequireRole>
         }
       />

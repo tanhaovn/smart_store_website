@@ -1,0 +1,21 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "frontend-ivjlf1e5j-phamtanhao1909-5875s-projects.vercel.app"
+        }
+      ],
+      "destination": "https://frontend-mauve-eta-79.vercel.app/$1",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

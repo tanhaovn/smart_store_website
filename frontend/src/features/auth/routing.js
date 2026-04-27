@@ -15,7 +15,7 @@ export function getRoleLabel(role) {
     return "Giao hàng";
   }
   if (normalizedRole === "SELLER") {
-    return "Seller";
+    return "Người bán";
   }
   if (normalizedRole === "ADMIN") {
     return "Admin";

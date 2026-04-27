@@ -43,7 +43,7 @@ export default function RegisterPage() {
       await requestRegisterOtp(payload);
       setOtpSent(true);
       setNotice(
-        `OTP da duoc gui toi so ${registerForm.phone}. Vui long nhap OTP de hoan tat.`,
+        `OTP đã được gửi tới số ${registerForm.phone}. Vui lòng nhập OTP để hoàn tất.`,
       );
     } catch (error) {
       setNotice(error.message);
@@ -63,7 +63,7 @@ export default function RegisterPage() {
         otp: otpCode,
       });
       login(data.access_token, data.user);
-      setNotice("Dang ky thanh cong.");
+      setNotice("Đăng ký thành công.");
       setOtpCode("");
       setOtpSent(false);
       setRegisterForm(initialRegisterForm);
@@ -82,15 +82,15 @@ export default function RegisterPage() {
           Smart Vision Shop
         </h1>
         <p className="mt-2 text-sm text-teal-700">
-          Dang ky tai khoan khach hang bang OTP
+          Đăng ký tài khoản khách hàng bằng OTP
         </p>
         <div className="mt-4 rounded-2xl border border-teal-100 bg-linear-to-r from-teal-50 to-emerald-50 p-4">
           <p className="text-sm font-semibold text-teal-900">
-            Luu y phan quyen
+            Lưu ý phân quyền
           </p>
           <p className="mt-1 text-sm text-teal-700">
-            Dang ky tao tai khoan nguoi mua (USER). Tai khoan ADMIN, SELLER va
-            DELIVERY duoc cap boi quan tri he thong.
+            Đăng ký tạo tài khoản người mua (USER). Tài khoản ADMIN, SELLER và
+            DELIVERY được cấp bởi quản trị hệ thống.
           </p>
         </div>
 
@@ -112,12 +112,12 @@ export default function RegisterPage() {
         />
 
         <p className="mt-4 text-sm text-slate-600">
-          Da co tai khoan?{" "}
+          Đã có tài khoản?{" "}
           <Link
             className="font-semibold text-teal-600 hover:text-teal-700"
             to="/login"
           >
-            Dang nhap
+            Đăng nhập
           </Link>
         </p>
 

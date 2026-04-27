@@ -916,10 +916,43 @@ select {
 .order-status {
   padding: 6px 10px;
   border-radius: 999px;
-  color: #c2410c;
-  background: #fff1e7;
+  border: 1px solid transparent;
   font-size: 12px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.order-status.status-cho-xac-nhan {
+  color: #9a3412;
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+
+.order-status.status-dang-chuan-bi {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+.order-status.status-dang-giao {
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.order-status.status-da-giao {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.order-status.status-da-huy,
+.order-status.status-khac {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
 .detail-grid {
@@ -1006,19 +1039,19 @@ select {
 
 .chat-bubble p {
   margin: 6px 0 0;
-  color: #7c2d12;
+  color: #0f172a;
 }
 
 .chat-bubble span {
   display: block;
   margin-top: 8px;
   font-size: 12px;
-  color: #c08457;
+  color: #0f172a;
 }
 
 .chat-panel {
   display: grid;
-  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.4fr);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -1027,6 +1060,7 @@ select {
 .chat-stage {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 
 .chat-rail-head,
@@ -1494,6 +1528,270 @@ select {
   background: rgba(240, 253, 250, 0.75);
 }
 
+.seller-zalo-layout {
+  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+  align-items: stretch;
+}
+
+.seller-chat-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.seller-chat-preview {
+  border-radius: 16px;
+}
+
+.seller-chat-preview.is-header {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.seller-chat-tip {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(204, 251, 241, 0.68);
+  border: 1px dashed rgba(20, 184, 166, 0.35);
+}
+
+.seller-chat-main {
+  display: grid;
+  grid-template-rows: auto minmax(340px, 1fr) auto;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  background: rgba(236, 253, 245, 0.72);
+}
+
+.seller-chat-main-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.seller-zalo-thread {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 380px;
+  max-height: 540px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.56)),
+    radial-gradient(
+      circle at 16px 16px,
+      rgba(20, 184, 166, 0.09) 0,
+      rgba(20, 184, 166, 0.09) 2px,
+      transparent 2px,
+      transparent 18px
+    );
+  background-size:
+    auto,
+    22px 22px;
+}
+
+.seller-message-row {
+  display: flex;
+}
+
+.seller-message-row.is-me {
+  justify-content: flex-end;
+}
+
+.seller-message-row.is-them {
+  justify-content: flex-start;
+}
+
+.seller-zalo-bubble {
+  max-width: min(78%, 560px);
+  border-radius: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(20, 184, 166, 0.22);
+  box-shadow: 0 8px 18px rgba(13, 148, 136, 0.1);
+}
+
+.seller-zalo-bubble p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.seller-zalo-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.seller-zalo-meta strong {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: #0f172a;
+}
+
+.seller-zalo-meta span {
+  font-size: 11px;
+  color: #0f172a;
+  opacity: 0.78;
+}
+
+.seller-zalo-bubble.me {
+  background: linear-gradient(135deg, #14b8a6, #0f766e);
+  border-color: rgba(15, 118, 110, 0.45);
+}
+
+.seller-zalo-bubble.me p,
+.seller-zalo-bubble.me .seller-zalo-meta strong,
+.seller-zalo-bubble.me .seller-zalo-meta span {
+  color: #0f172a;
+}
+
+.seller-zalo-bubble.them {
+  background: #ffffff;
+}
+
+.seller-chat-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.seller-chat-composer .field-textarea {
+  min-height: 70px;
+  max-height: 140px;
+}
+
+.seller-chat-send {
+  min-width: 120px;
+  height: 46px;
+}
+
+.user-zalo-layout {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: stretch;
+}
+
+.user-chat-sidebar {
+  align-content: start;
+  min-width: 0;
+}
+
+.user-chat-preview {
+  display: grid;
+  gap: 8px;
+}
+
+.user-chat-main {
+  grid-template-rows: auto minmax(320px, 1fr) auto;
+  min-width: 0;
+}
+
+.user-chat-main-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.user-zalo-thread {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 340px;
+  max-height: 520px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.56)),
+    radial-gradient(
+      circle at 16px 16px,
+      rgba(20, 184, 166, 0.09) 0,
+      rgba(20, 184, 166, 0.09) 2px,
+      transparent 2px,
+      transparent 18px
+    );
+  background-size:
+    auto,
+    22px 22px;
+}
+
+.user-message-row {
+  display: flex;
+}
+
+.user-message-row.is-me {
+  justify-content: flex-end;
+}
+
+.user-message-row.is-them {
+  justify-content: flex-start;
+}
+
+.user-zalo-bubble {
+  max-width: min(78%, 560px);
+  border-radius: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(20, 184, 166, 0.22);
+  box-shadow: 0 8px 18px rgba(13, 148, 136, 0.1);
+}
+
+.user-zalo-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.user-zalo-meta strong {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: #0f172a;
+}
+
+.user-zalo-meta span {
+  font-size: 11px;
+  color: #0f172a;
+  opacity: 0.78;
+}
+
+.user-zalo-bubble.me {
+  background: linear-gradient(135deg, #14b8a6, #0f766e);
+  border-color: rgba(15, 118, 110, 0.45);
+}
+
+.user-zalo-bubble.me p,
+.user-zalo-bubble.me .user-zalo-meta strong,
+.user-zalo-bubble.me .user-zalo-meta span {
+  color: #0f172a;
+}
+
+.user-zalo-bubble.them {
+  background: #ffffff;
+}
+
+.user-chat-composer {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.user-chat-composer .field-textarea {
+  min-height: 70px;
+  max-height: 140px;
+}
+
+.user-chat-send {
+  min-width: 128px;
+  height: 46px;
+}
+
 @media (max-width: 1180px) {
   .compact-table th:nth-child(4),
   .compact-table td:nth-child(4) {
@@ -1505,6 +1803,34 @@ select {
   .seller-split,
   .seller-chat-layout {
     grid-template-columns: 1fr;
+  }
+
+  .seller-zalo-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .seller-chat-main {
+    grid-template-rows: auto minmax(320px, 1fr) auto;
+  }
+
+  .user-zalo-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .user-chat-composer {
+    grid-template-columns: 1fr;
+  }
+
+  .user-chat-send {
+    width: 100%;
+  }
+
+  .seller-chat-composer {
+    grid-template-columns: 1fr;
+  }
+
+  .seller-chat-send {
+    width: 100%;
   }
 
   .compact-input,
@@ -1668,8 +1994,7 @@ select {
 .section-meta,
 .hero-pills span,
 .category-chip,
-.chat-thread-badge,
-.order-status {
+.chat-thread-badge {
   background: #ccfbf1;
   color: #0f766e;
   border-color: rgba(20, 184, 166, 0.28);

@@ -1,3 +1,4 @@
+import os
 import random
 from urllib.parse import quote_plus
 
@@ -544,4 +545,11 @@ def sync_product_images(overwrite: bool):
 
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", "5000"))
+    debug = str(os.environ.get("FLASK_DEBUG", "false")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    socketio.run(app, host="0.0.0.0", port=port, debug=debug)

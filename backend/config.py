@@ -6,12 +6,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _normalize_database_url(url: str) -> str:
+    normalized = str(url or "").strip()
+    if normalized.startswith("postgres://"):
+        return normalized.replace("postgres://", "postgresql+psycopg2://", 1)
+    if normalized.startswith("postgresql://") and "+" not in normalized.split("://", 1)[0]:
+        return normalized.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return normalized
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
     JWT_SECRET = os.getenv("JWT_SECRET", "Hao@1909")
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        "mysql+pymysql://root:Hao%401909@localhost/smart_store",
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(
+        os.getenv(
+            "DATABASE_URL",
+            "mysql+pymysql://root:Hao%401909@localhost/smart_store",
+        )
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024

@@ -7,23 +7,23 @@ import { useAuth } from "../useAuth";
 
 const ROLE_PRESETS = {
   USER: {
-    label: "Nguoi mua",
-    hint: "Mua hang, gio hang, dat don va chat shop",
+    label: "Người mua",
+    hint: "Mua hàng, giỏ hàng, đặt đơn và chat shop",
     demoEmail: "user1@smartstore.local",
   },
   SELLER: {
-    label: "Nguoi ban",
-    hint: "Quan ly san pham, don hang va khuyen mai",
+    label: "Người bán",
+    hint: "Quản lý sản phẩm, đơn hàng và khuyến mãi",
     demoEmail: "seller1@smartstore.local",
   },
   ADMIN: {
     label: "Admin",
-    hint: "Quan ly quyen, duyet san pham va he thong",
+    hint: "Quản lý quyền, duyệt sản phẩm và hệ thống",
     demoEmail: "admin@smartstore.local",
   },
   DELIVERY: {
-    label: "Nhan don",
-    hint: "Cap nhat trang thai giao hang va thong tin giao",
+    label: "Nhận đơn",
+    hint: "Cập nhật trạng thái giao hàng và thông tin giao",
     demoEmail: "delivery@smartstore.local",
   },
 };
@@ -50,7 +50,7 @@ export default function LoginPage() {
       email: selectedRoleMeta.demoEmail,
       password: DEMO_PASSWORD,
     });
-    setNotice(`Da dien nhanh tai khoan demo ${selectedRoleMeta.label}`);
+    setNotice(`Đã điền nhanh tài khoản demo ${selectedRoleMeta.label}`);
   };
 
   const onLogin = async (event) => {
@@ -60,7 +60,7 @@ export default function LoginPage() {
     try {
       const data = await loginByRole(loginForm, role);
       login(data.access_token, data.user);
-      setNotice(`Dang nhap thanh cong: ${data.user?.email || loginForm.email}`);
+      setNotice(`Đăng nhập thành công: ${data.user?.email || loginForm.email}`);
       navigate(getHomePathForRole(data.user?.role), { replace: true });
     } catch (error) {
       setNotice(error.message);
@@ -79,21 +79,21 @@ export default function LoginPage() {
           <h2 className="text-3xl font-extrabold leading-tight">
             Giao dien xanh ngoc,
             <br />
-            ban hang hien dai
+            bán hàng hiện đại
           </h2>
           <p className="mt-4 max-w-sm text-sm text-emerald-50">
-            Dang nhap nhanh theo role, vao dung dashboard va quan ly toan bo
-            luong ban hang trong mot giao dien gon dep.
+            Đăng nhập nhanh theo vai trò, vào đúng dashboard và quản lý toàn bộ
+            luồng bán hàng trong một giao diện gọn đẹp.
           </p>
           <div className="mt-8 grid gap-3 text-sm">
             <div className="rounded-2xl bg-white/15 p-3">
-              USER: dat hang va theo doi don
+              USER: đặt hàng và theo dõi đơn
             </div>
             <div className="rounded-2xl bg-white/15 p-3">
-              SELLER: quan ly san pham va don
+              SELLER: quản lý sản phẩm và đơn
             </div>
             <div className="rounded-2xl bg-white/15 p-3">
-              DELIVERY + ADMIN: dieu pho va van hanh
+              DELIVERY + ADMIN: điều phối và vận hành
             </div>
           </div>
         </div>
@@ -103,13 +103,13 @@ export default function LoginPage() {
             Smart Vision Shop
           </h1>
           <p className="mt-2 text-sm text-teal-700">
-            Dang nhap theo dung quyen de vao dung dashboard
+            Đăng nhập theo đúng quyền để vào đúng dashboard
           </p>
 
           <div
             className="mt-5 grid grid-cols-2 gap-2"
             role="tablist"
-            aria-label="Vai tro dang nhap"
+            aria-label="Vai trò đăng nhập"
           >
             {Object.entries(ROLE_PRESETS).map(([roleKey, roleMeta]) => (
               <button
@@ -129,7 +129,7 @@ export default function LoginPage() {
 
           <div className="mt-4 rounded-2xl border border-teal-100 bg-linear-to-r from-teal-50 to-emerald-50 p-4">
             <p className="text-sm font-semibold text-teal-900">
-              Dang chon: {selectedRoleMeta.label}
+              Đang chọn: {selectedRoleMeta.label}
             </p>
             <p className="mt-1 text-sm text-teal-700">
               {selectedRoleMeta.hint}
@@ -139,7 +139,7 @@ export default function LoginPage() {
               type="button"
               onClick={onFillDemoAccount}
             >
-              Dien nhanh tai khoan demo
+              Điền nhanh tài khoản demo
             </button>
           </div>
 
@@ -158,12 +158,12 @@ export default function LoginPage() {
           />
 
           <p className="mt-4 text-sm text-slate-600">
-            Chua co tai khoan?{" "}
+            Chưa có tài khoản?{" "}
             <Link
               className="font-semibold text-teal-600 hover:text-teal-700"
               to="/register"
             >
-              Dang ky bang OTP
+              Đăng ký bằng OTP
             </Link>
           </p>
 

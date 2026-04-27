@@ -25,6 +25,7 @@ def _build_delivery_chat_threads(shipper_id: int) -> list[dict]:
         .join(Order, Order.id == DeliveryAssignment.order_id)
         .join(User, User.id == Order.user_id)
         .filter(DeliveryAssignment.shipper_id == shipper_id)
+        .filter(Order.status.in_(["DANG_CHUAN_BI", "DANG_GIAO", "DA_GIAO"]))
         .order_by(Order.id.desc())
         .all()
     )
@@ -171,20 +172,25 @@ def assign_order_to_shipper():
 @delivery_bp.get("/orders")
 @auth_required(["DELIVERY", "ADMIN"])
 def delivery_orders():
-    query = DeliveryAssignment.query
+    query = (
+        db.session.query(DeliveryAssignment, Order)
+        .join(Order, Order.id == DeliveryAssignment.order_id)
+    )
     if g.current_user_role == "DELIVERY":
-        query = query.filter_by(shipper_id=g.current_user_id)
+        query = query.filter(DeliveryAssignment.shipper_id == g.current_user_id)
+        # Shipper only sees orders once seller has confirmed and prepared them.
+        query = query.filter(Order.status.in_(["DANG_CHUAN_BI", "DANG_GIAO", "DA_GIAO"]))
 
     assignments = query.order_by(DeliveryAssignment.id.desc()).all()
     return {
         "items": [
             {
-                "assignment_id": a.id,
-                "order_id": a.order_id,
-                "shipper_id": a.shipper_id,
-                "status": a.status,
+                "assignment_id": assignment.id,
+                "order_id": assignment.order_id,
+                "shipper_id": assignment.shipper_id,
+                "status": order.status,
             }
-            for a in assignments
+            for assignment, order in assignments
         ]
     }, 200
 
@@ -207,8 +213,21 @@ def update_delivery_status(order_id: int):
     order = Order.query.get_or_404(order_id)
     assignment = DeliveryAssignment.query.filter_by(order_id=order.id).first()
     if g.current_user_role == "DELIVERY":
-        if assignment and assignment.shipper_id != g.current_user_id:
+        if not assignment:
+            return {"error": "Order has not been assigned to a shipper"}, 403
+        if assignment.shipper_id != g.current_user_id:
             return {"error": "You are not assigned to this order"}, 403
+
+        transition_map = {
+            "DANG_CHUAN_BI": {"DANG_GIAO"},
+            "DANG_GIAO": {"DA_GIAO"},
+        }
+        current_status = str(order.status or "").strip().upper()
+        allowed_next = transition_map.get(current_status, set())
+        if status not in allowed_next:
+            return {
+                "error": "Delivery can only move status DANG_CHUAN_BI -> DANG_GIAO or DANG_GIAO -> DA_GIAO"
+            }, 400
 
     if not assignment:
         assignment = DeliveryAssignment(order_id=order.id, shipper_id=g.current_user_id, status=status)

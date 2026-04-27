@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { io } from "socket.io-client";
 import DashboardLayout from "../DashboardLayout";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../services/http";
-import { formatDateTime, formatMoney, safeItems } from "../dashboardUtils";
+import {
+  formatDateTime,
+  formatMoney,
+  getOrderStatusClass,
+  getOrderStatusLabel,
+  safeItems,
+} from "../dashboardUtils";
 import { useAuth } from "../../auth/useAuth";
 
 const initialProductForm = {
@@ -15,11 +22,30 @@ const initialProductForm = {
 
 const initialCategoryForm = { name: "", description: "" };
 
-const backendOrigin =
-  import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:5000";
+const backendOrigin = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_BACKEND_URL ||
+  "http://127.0.0.1:5000"
+)
+  .trim()
+  .replace(/\/+$/, "");
+const socketServerUrl = (import.meta.env.VITE_SOCKET_URL || backendOrigin)
+  .trim()
+  .replace(/\/+$/, "");
+
+function shouldUsePollingOnly(socketUrl) {
+  try {
+    const host = new URL(socketUrl, window.location.origin).hostname;
+    return host.endsWith(".vercel.app");
+  } catch {
+    return false;
+  }
+}
+
+const disableRealtimeSocket = shouldUsePollingOnly(socketServerUrl);
 
 function buildFallbackProductThumb(label) {
-  const text = String(label || "San pham")
+  const text = String(label || "Sản phẩm")
     .trim()
     .slice(0, 18)
     .toUpperCase();
@@ -51,7 +77,7 @@ function buildFallbackProductThumb(label) {
 }
 
 function buildFallbackAvatar(label) {
-  const parts = String(label || "Khach")
+  const parts = String(label || "Khách")
     .trim()
     .split(/\s+/)
     .filter(Boolean);
@@ -110,7 +136,7 @@ function resolveImageUrl(
 }
 
 export default function SellerDashboard() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -139,30 +165,33 @@ export default function SellerDashboard() {
   const [inventoryDraftById, setInventoryDraftById] = useState({});
   const [busyProductId, setBusyProductId] = useState(null);
   const [activePanel, setActivePanel] = useState("products");
+  const chatSocketRef = useRef(null);
+  const activeChatUserIdRef = useRef("");
+  const chatScrollRef = useRef(null);
 
   const sellerPanels = useMemo(
     () => [
       {
         key: "products",
-        label: "San pham",
+        label: "Sản phẩm",
         count: products.length,
         hint: "CRUD",
       },
       {
         key: "categories",
-        label: "Danh muc",
+        label: "Danh mục",
         count: categories.length,
         hint: "CRUD",
       },
       {
         key: "orders",
-        label: "Don hang",
+        label: "Đơn hàng",
         count: orders.length,
         hint: "Status",
       },
       {
         key: "promotions",
-        label: "Khuyen mai",
+        label: "Khuyến mãi",
         count: promotions.length,
         hint: "Deals",
       },
@@ -188,6 +217,10 @@ export default function SellerDashboard() {
   const selectedChatUser =
     (chatForm.user_id && chatUserById[String(chatForm.user_id)]) || null;
 
+  useEffect(() => {
+    activeChatUserIdRef.current = String(chatForm.user_id || "");
+  }, [chatForm.user_id]);
+
   function normalizeStock(value) {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed) || parsed < 0) {
@@ -197,27 +230,18 @@ export default function SellerDashboard() {
   }
 
   async function refreshAll() {
-    const [
-      productData,
-      categoryData,
-      orderData,
-      chatUserData,
-      promotionData,
-      revenueData,
-    ] = await Promise.all([
-      apiGet("/api/seller/products"),
-      apiGet("/api/seller/categories"),
-      apiGet("/api/seller/orders"),
-      apiGet("/api/seller/chat-users"),
-      apiGet("/api/seller/promotions"),
-      apiGet("/api/seller/revenue"),
-    ]);
-    setProducts(safeItems(productData.items));
-    setCategories(safeItems(categoryData.items));
-    setOrders(safeItems(orderData.items));
-    setChatUsers(safeItems(chatUserData.items));
-    setPromotions(safeItems(promotionData.items));
-    setRevenue(revenueData);
+    const bootstrap = await apiGet("/api/seller/bootstrap");
+    setProducts(safeItems(bootstrap.products));
+    setCategories(safeItems(bootstrap.categories));
+    setOrders(safeItems(bootstrap.orders));
+    setChatUsers(safeItems(bootstrap.chat_users));
+    setPromotions(safeItems(bootstrap.promotions));
+    setRevenue(
+      bootstrap.revenue || {
+        total_revenue: 0,
+        completed_orders: 0,
+      },
+    );
   }
 
   async function loadChatHistory(userId) {
@@ -243,6 +267,92 @@ export default function SellerDashboard() {
     );
   }, [chatForm.user_id]);
 
+  useEffect(() => {
+    if (activePanel !== "chat") {
+      return;
+    }
+
+    const threadNode = chatScrollRef.current;
+    if (threadNode) {
+      threadNode.scrollTop = threadNode.scrollHeight;
+    }
+  }, [chatMessages, activePanel, chatForm.user_id]);
+
+  useEffect(() => {
+    if (disableRealtimeSocket || !token || !user?.id) {
+      return;
+    }
+
+    const socket = io(`${socketServerUrl}/ws/chat`, {
+      path: "/socket.io",
+      auth: { token },
+      transports: ["websocket", "polling"],
+    });
+
+    chatSocketRef.current = socket;
+
+    const onConnect = () => {
+      const activeUserId = Number(activeChatUserIdRef.current);
+      if (activeUserId > 0) {
+        socket.emit("join", { peer_id: activeUserId });
+      }
+    };
+
+    const onNewMessage = (message) => {
+      const activeUserId = Number(activeChatUserIdRef.current);
+      if (!activeUserId) {
+        return;
+      }
+
+      const sellerId = Number(user.id);
+      const senderId = Number(message.sender_id);
+      const receiverId = Number(message.receiver_id);
+
+      const isCurrentThreadMessage =
+        (senderId === sellerId && receiverId === activeUserId) ||
+        (senderId === activeUserId && receiverId === sellerId);
+
+      if (!isCurrentThreadMessage) {
+        return;
+      }
+
+      setChatMessages((prev) =>
+        prev.some((item) => Number(item.id) === Number(message.id))
+          ? prev
+          : [...prev, message],
+      );
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("new_message", onNewMessage);
+    socket.on("db_changed", () => {
+      refreshAll().catch((error) => setNotice(error.message));
+      const currentChatUserId = chatForm.user_id;
+      if (currentChatUserId) {
+        loadChatHistory(currentChatUserId).catch((error) =>
+          setNotice(error.message),
+        );
+      }
+    });
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("new_message", onNewMessage);
+      socket.off("db_changed");
+      socket.disconnect();
+      chatSocketRef.current = null;
+    };
+  }, [token, user?.id, chatForm.user_id]);
+
+  useEffect(() => {
+    const socket = chatSocketRef.current;
+    if (!socket || !chatForm.user_id) {
+      return;
+    }
+
+    socket.emit("join", { peer_id: Number(chatForm.user_id) });
+  }, [chatForm.user_id]);
+
   const onCreateProduct = async (event) => {
     event.preventDefault();
     try {
@@ -256,10 +366,10 @@ export default function SellerDashboard() {
       };
       if (editingProductId) {
         await apiPatch(`/api/seller/products/${editingProductId}`, payload);
-        setNotice(`Da cap nhat san pham #${editingProductId}`);
+        setNotice(`Đã cập nhật sản phẩm #${editingProductId}`);
       } else {
         await apiPost("/api/seller/products", payload);
-        setNotice("Da tao san pham moi, dang cho admin duyet");
+        setNotice("Đã tạo sản phẩm mới, đang chờ admin duyệt");
       }
 
       setProductForm(initialProductForm);
@@ -301,7 +411,7 @@ export default function SellerDashboard() {
       const stock = normalizeStock(inventoryDraftById[productId]);
       setBusyProductId(productId);
       await apiPatch(`/api/seller/inventory/${productId}`, { stock });
-      setNotice(`Da cap nhat ton kho san pham #${productId}`);
+      setNotice(`Đã cập nhật tồn kho sản phẩm #${productId}`);
       await refreshAll();
     } catch (error) {
       setNotice(error.message);
@@ -318,10 +428,10 @@ export default function SellerDashboard() {
           `/api/seller/categories/${editingCategoryId}`,
           categoryForm,
         );
-        setNotice(`Da cap nhat danh muc #${editingCategoryId}`);
+        setNotice(`Đã cập nhật danh mục #${editingCategoryId}`);
       } else {
         await apiPost("/api/seller/categories", categoryForm);
-        setNotice("Da tao danh muc moi");
+        setNotice("Đã tạo danh mục mới");
       }
 
       setCategoryForm(initialCategoryForm);
@@ -381,10 +491,33 @@ export default function SellerDashboard() {
   const onSendChat = async (event) => {
     event.preventDefault();
     try {
+      if (!chatForm.user_id) {
+        setNotice("Hãy chọn khách hàng trước khi gửi tin nhắn");
+        return;
+      }
+
+      const message = chatForm.message.trim();
+      if (!message) {
+        setNotice("Nội dung chat không được để trống");
+        return;
+      }
+
+      const socket = chatSocketRef.current;
+      if (socket?.connected && chatForm.user_id) {
+        socket.emit("send_message", {
+          receiver_id: Number(chatForm.user_id),
+          order_id: chatForm.order_id ? Number(chatForm.order_id) : undefined,
+          message,
+        });
+        setChatForm((prev) => ({ ...prev, message: "" }));
+        setNotice("Đã gửi chat realtime");
+        return;
+      }
+
       await apiPost("/api/seller/chat", {
         user_id: Number(chatForm.user_id),
         order_id: chatForm.order_id ? Number(chatForm.order_id) : undefined,
-        message: chatForm.message,
+        message,
       });
       setChatForm((prev) => ({ ...prev, message: "" }));
       await loadChatHistory(chatForm.user_id);
@@ -395,11 +528,11 @@ export default function SellerDashboard() {
 
   return (
     <DashboardLayout
-      title="Khu vuc Seller"
-      subtitle="Quan ly san pham, danh muc, don hang, khuyen mai va chat voi khach."
+      title="Khu vực Seller"
+      subtitle="Quản lý sản phẩm, danh mục, đơn hàng, khuyến mãi và chat với khách."
       highlights={[
-        { label: "San pham", value: products.length },
-        { label: "Don hang", value: orders.length },
+        { label: "Sản phẩm", value: products.length },
+        { label: "Đơn hàng", value: orders.length },
         { label: "Doanh thu", value: formatMoney(revenue.total_revenue) },
       ]}
     >
@@ -412,9 +545,9 @@ export default function SellerDashboard() {
       <section className="panel compact-panel">
         <div className="seller-workspace-head">
           <div>
-            <div className="small-text">Ben lam viec</div>
+            <div className="small-text">Bên làm việc</div>
             <h2>{activePanelMeta.label}</h2>
-            <p>{activePanelMeta.hint} - giao dien toi uu cho tac vu nhanh.</p>
+            <p>{activePanelMeta.hint} - giao diện tối ưu cho tác vụ nhanh.</p>
           </div>
           <div className="workspace-chip">{activePanelMeta.count} items</div>
         </div>
@@ -438,9 +571,9 @@ export default function SellerDashboard() {
         <section className="panel compact-panel">
           <div className="panel-head compact-head">
             <div>
-              <h2>CRUD san pham</h2>
+              <h2>CRUD sản phẩm</h2>
               <p>
-                Quan ly san pham, ton kho va anh trong mot khu vuc ngan gon.
+                Quản lý sản phẩm, tồn kho và ảnh trong một khu vực ngắn gọn.
               </p>
             </div>
             <div className="small-text">{products.length} items</div>
@@ -450,7 +583,7 @@ export default function SellerDashboard() {
             <form className="form-grid compact-form" onSubmit={onCreateProduct}>
               <div className="two-col compact-grid">
                 <label className="field-label">
-                  Ten san pham
+                  Tên sản phẩm
                   <input
                     className="field-input"
                     value={productForm.name}
@@ -464,7 +597,7 @@ export default function SellerDashboard() {
                   />
                 </label>
                 <label className="field-label">
-                  Gia
+                  Giá
                   <input
                     className="field-input"
                     type="number"
@@ -482,7 +615,7 @@ export default function SellerDashboard() {
               </div>
               <div className="two-col compact-grid">
                 <label className="field-label">
-                  Ton kho
+                  Tồn kho
                   <input
                     className="field-input"
                     type="number"
@@ -497,7 +630,7 @@ export default function SellerDashboard() {
                   />
                 </label>
                 <label className="field-label">
-                  Category ID
+                  Mã danh mục
                   <input
                     className="field-input"
                     type="number"
@@ -512,7 +645,7 @@ export default function SellerDashboard() {
                 </label>
               </div>
               <label className="field-label">
-                Image URL
+                URL ảnh
                 <input
                   className="field-input"
                   value={productForm.image_url}
@@ -525,7 +658,7 @@ export default function SellerDashboard() {
                 />
               </label>
               <label className="field-label">
-                Mo ta
+                Mô tả
                 <input
                   className="field-input"
                   value={productForm.description}
@@ -539,7 +672,7 @@ export default function SellerDashboard() {
               </label>
               <div className="action-row compact-actions">
                 <button className="primary-btn" type="submit">
-                  {editingProductId ? "Luu" : "Tao"}
+                  {editingProductId ? "Lưu" : "Tạo"}
                 </button>
                 {editingProductId && (
                   <button
@@ -550,7 +683,7 @@ export default function SellerDashboard() {
                       setProductForm(initialProductForm);
                     }}
                   >
-                    Huy sua
+                    Hủy sửa
                   </button>
                 )}
               </div>
@@ -560,9 +693,9 @@ export default function SellerDashboard() {
               <table className="data-table compact-table">
                 <thead>
                   <tr>
-                    <th>San pham</th>
-                    <th>Gia</th>
-                    <th>Ton kho</th>
+                    <th>Sản phẩm</th>
+                    <th>Giá</th>
+                    <th>Tồn kho</th>
                     <th>CRUD</th>
                   </tr>
                 </thead>
@@ -582,7 +715,7 @@ export default function SellerDashboard() {
                           <div className="compact-product-copy">
                             <strong>{product.name}</strong>
                             <span>
-                              {product.is_approved ? "Da duyet" : "Cho duyet"}
+                              {product.is_approved ? "Đã duyệt" : "Chờ duyệt"}
                             </span>
                           </div>
                         </div>
@@ -610,7 +743,7 @@ export default function SellerDashboard() {
                             disabled={busyProductId === product.id}
                             onClick={() => onSaveInventory(product.id)}
                           >
-                            {busyProductId === product.id ? "..." : "Luu"}
+                            {busyProductId === product.id ? "..." : "Lưu"}
                           </button>
                         </div>
                       </td>
@@ -621,14 +754,14 @@ export default function SellerDashboard() {
                             type="button"
                             onClick={() => onSelectProduct(product)}
                           >
-                            Sua
+                            Sửa
                           </button>
                           <button
                             className="danger-btn"
                             type="button"
                             onClick={() => onDeleteProduct(product.id)}
                           >
-                            Xoa
+                            Xóa
                           </button>
                         </div>
                       </td>
@@ -645,8 +778,8 @@ export default function SellerDashboard() {
         <section className="panel compact-panel">
           <div className="panel-head compact-head">
             <div>
-              <h2>CRUD danh muc</h2>
-              <p>Tao, sua, xoa danh muc trong 1 man hinh ngan gon.</p>
+              <h2>CRUD danh mục</h2>
+              <p>Tạo, sửa, xóa danh mục trong 1 màn hình ngắn gọn.</p>
             </div>
             <div className="small-text">{categories.length} categories</div>
           </div>
@@ -656,7 +789,7 @@ export default function SellerDashboard() {
               onSubmit={onCreateCategory}
             >
               <label className="field-label">
-                Ten danh muc
+                Tên danh mục
                 <input
                   className="field-input"
                   value={categoryForm.name}
@@ -670,7 +803,7 @@ export default function SellerDashboard() {
                 />
               </label>
               <label className="field-label">
-                Mo ta
+                Mô tả
                 <input
                   className="field-input"
                   value={categoryForm.description}
@@ -684,7 +817,7 @@ export default function SellerDashboard() {
               </label>
               <div className="action-row compact-actions">
                 <button className="primary-btn" type="submit">
-                  {editingCategoryId ? "Luu" : "Tao"}
+                  {editingCategoryId ? "Lưu" : "Tạo"}
                 </button>
                 {editingCategoryId && (
                   <button
@@ -695,7 +828,7 @@ export default function SellerDashboard() {
                       setCategoryForm(initialCategoryForm);
                     }}
                   >
-                    Huy sua
+                    Hủy sửa
                   </button>
                 )}
               </div>
@@ -705,8 +838,8 @@ export default function SellerDashboard() {
               <table className="data-table compact-table">
                 <thead>
                   <tr>
-                    <th>Danh muc</th>
-                    <th>Mo ta</th>
+                    <th>Danh mục</th>
+                    <th>Mô tả</th>
                     <th>CRUD</th>
                   </tr>
                 </thead>
@@ -722,14 +855,14 @@ export default function SellerDashboard() {
                             type="button"
                             onClick={() => onSelectCategory(category)}
                           >
-                            Sua
+                            Sửa
                           </button>
                           <button
                             className="danger-btn"
                             type="button"
                             onClick={() => onDeleteCategory(category.id)}
                           >
-                            Xoa
+                            Xóa
                           </button>
                         </div>
                       </td>
@@ -746,8 +879,8 @@ export default function SellerDashboard() {
         <section className="panel compact-panel">
           <div className="panel-head compact-head">
             <div>
-              <h2>CRUD don hang</h2>
-              <p>Cap nhat trang thai don trong bang ngan va ro.</p>
+              <h2>CRUD đơn hàng</h2>
+              <p>Cập nhật trạng thái đơn trong bảng ngắn và rõ.</p>
             </div>
             <div className="small-text">{orders.length} orders</div>
           </div>
@@ -755,10 +888,10 @@ export default function SellerDashboard() {
             <table className="data-table compact-table">
               <thead>
                 <tr>
-                  <th>Don</th>
-                  <th>Khach</th>
-                  <th>Trang thai</th>
-                  <th>Thanh tien</th>
+                  <th>Đơn</th>
+                  <th>Khách</th>
+                  <th>Trạng thái</th>
+                  <th>Thành tiền</th>
                   <th>CRUD</th>
                 </tr>
               </thead>
@@ -767,7 +900,13 @@ export default function SellerDashboard() {
                   <tr key={order.id}>
                     <td>#{order.id}</td>
                     <td>{order.user_id}</td>
-                    <td>{order.status}</td>
+                    <td>
+                      <span
+                        className={`order-status ${getOrderStatusClass(order.status)}`}
+                      >
+                        {getOrderStatusLabel(order.status)}
+                      </span>
+                    </td>
                     <td>
                       {formatMoney(
                         Number(order.total_amount || 0) +
@@ -786,17 +925,17 @@ export default function SellerDashboard() {
                             }))
                           }
                         >
-                          <option value="CHO_XAC_NHAN">CHO_XAC_NHAN</option>
-                          <option value="DANG_CHUAN_BI">DANG_CHUAN_BI</option>
-                          <option value="DANG_GIAO">DANG_GIAO</option>
-                          <option value="DA_GIAO">DA_GIAO</option>
+                          <option value="CHO_XAC_NHAN">Chờ xác nhận</option>
+                          <option value="DANG_CHUAN_BI">Đang chuẩn bị</option>
+                          <option value="DANG_GIAO">Đang giao</option>
+                          <option value="DA_GIAO">Đã giao</option>
                         </select>
                         <button
                           className="primary-btn"
                           type="button"
                           onClick={() => onUpdateOrderStatus(order.id)}
                         >
-                          Luu
+                          Lưu
                         </button>
                       </div>
                     </td>
@@ -812,8 +951,8 @@ export default function SellerDashboard() {
         <section className="panel compact-panel">
           <div className="panel-head compact-head">
             <div>
-              <h2>CRUD khuyen mai</h2>
-              <p>Them ma giam gia va theo doi danh sach nhanh.</p>
+              <h2>CRUD khuyến mãi</h2>
+              <p>Thêm mã giảm giá và theo dõi danh sách nhanh.</p>
             </div>
             <div className="small-text">{promotions.length} codes</div>
           </div>
@@ -824,7 +963,7 @@ export default function SellerDashboard() {
             >
               <div className="two-col compact-grid">
                 <label className="field-label">
-                  Ma khuyen mai
+                  Mã khuyến mãi
                   <input
                     className="field-input"
                     value={promotionForm.code}
@@ -838,7 +977,7 @@ export default function SellerDashboard() {
                   />
                 </label>
                 <label className="field-label">
-                  Giam %
+                  Giảm %
                   <input
                     className="field-input"
                     type="number"
@@ -854,16 +993,16 @@ export default function SellerDashboard() {
                 </label>
               </div>
               <button className="primary-btn" type="submit">
-                Tao
+                Tạo
               </button>
             </form>
             <div className="table-wrap compact-table-wrap">
               <table className="data-table compact-table">
                 <thead>
                   <tr>
-                    <th>Ma</th>
-                    <th>Giam</th>
-                    <th>Trang thai</th>
+                    <th>Mã</th>
+                    <th>Giảm</th>
+                    <th>Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -871,7 +1010,9 @@ export default function SellerDashboard() {
                     <tr key={promotion.id}>
                       <td>{promotion.code}</td>
                       <td>{promotion.discount_percent}%</td>
-                      <td>{promotion.is_active ? "Active" : "Inactive"}</td>
+                      <td>
+                        {promotion.is_active ? "Đang áp dụng" : "Ngừng áp dụng"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -885,46 +1026,90 @@ export default function SellerDashboard() {
         <section className="panel compact-panel">
           <div className="panel-head compact-head">
             <div>
-              <h2>CRUD chat</h2>
-              <p>Tra loi khach hang trong khung chat ngan gon.</p>
+              <h2>Chat với khách</h2>
+              <p>Giao diện dạng hội thoại để đọc và trả lời nhanh hơn.</p>
             </div>
             <div className="small-text">{chatUsers.length} customers</div>
           </div>
-          <div className="seller-chat-layout">
-            <form className="form-grid compact-form" onSubmit={onSendChat}>
-              <div className="two-col compact-grid">
-                <label className="field-label">
-                  Khach hang
-                  <select
-                    className="field-select"
-                    value={chatForm.user_id}
-                    onChange={(event) => {
-                      const userId = event.target.value;
-                      const selectedUser = chatUserById[userId];
-                      setChatForm((prev) => ({
-                        ...prev,
-                        user_id: userId,
-                        order_id:
-                          selectedUser?.latest_order_id !== undefined &&
-                          selectedUser?.latest_order_id !== null
-                            ? String(selectedUser.latest_order_id)
-                            : "",
-                      }));
-                    }}
-                    required
-                    disabled={!chatUsers.length}
-                  >
-                    <option value="">
-                      {chatUsers.length ? "-- Chon --" : "Chua co"}
+          <div className="seller-chat-layout seller-zalo-layout">
+            <aside className="compact-form seller-chat-sidebar">
+              <label className="field-label">
+                Khách hàng
+                <select
+                  className="field-select"
+                  value={chatForm.user_id}
+                  onChange={(event) => {
+                    const userId = event.target.value;
+                    const selectedUser = chatUserById[userId];
+                    setChatForm((prev) => ({
+                      ...prev,
+                      user_id: userId,
+                      order_id:
+                        selectedUser?.latest_order_id !== undefined &&
+                        selectedUser?.latest_order_id !== null
+                          ? String(selectedUser.latest_order_id)
+                          : "",
+                    }));
+                  }}
+                  required
+                  disabled={!chatUsers.length}
+                >
+                  <option value="">
+                    {chatUsers.length ? "-- Chọn --" : "Chưa có"}
+                  </option>
+                  {chatUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.full_name || user.email || `User #${user.id}`}
                     </option>
-                    {chatUsers.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.full_name || user.email || `User #${user.id}`}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="chat-user-preview">
+                  ))}
+                </select>
+              </label>
+
+              <div className="chat-user-preview seller-chat-preview">
+                <img
+                  className="compact-avatar"
+                  src={resolveImageUrl(
+                    selectedChatUser?.avatar_url,
+                    selectedChatUser?.full_name || selectedChatUser?.email,
+                    buildFallbackAvatar,
+                  )}
+                  alt={selectedChatUser?.full_name || "Khách hàng"}
+                />
+                <div>
+                  <strong>
+                    {selectedChatUser?.full_name || "Chưa chọn khách hàng"}
+                  </strong>
+                  <p>
+                    {selectedChatUser?.email ||
+                      "Chọn khách hàng để mở khung hội thoại."}
+                  </p>
+                </div>
+              </div>
+
+              <label className="field-label">
+                Mã đơn hàng
+                <input
+                  className="field-input"
+                  type="number"
+                  value={chatForm.order_id}
+                  onChange={(event) =>
+                    setChatForm((prev) => ({
+                      ...prev,
+                      order_id: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <p className="small-text seller-chat-tip">
+                Mẹo: Chọn khách hàng ở đây, khung bên phải sẽ hiện lịch sử hội
+                thoại và cho phép bạn trả lời ngay.
+              </p>
+            </aside>
+
+            <section className="seller-chat-main">
+              <header className="seller-chat-main-head">
+                <div className="chat-user-preview seller-chat-preview is-header">
                   <img
                     className="compact-avatar"
                     src={resolveImageUrl(
@@ -932,35 +1117,57 @@ export default function SellerDashboard() {
                       selectedChatUser?.full_name || selectedChatUser?.email,
                       buildFallbackAvatar,
                     )}
-                    alt={selectedChatUser?.full_name || "Khach hang"}
+                    alt={selectedChatUser?.full_name || "Khách hàng"}
                   />
                   <div>
                     <strong>
-                      {selectedChatUser?.full_name || "Chua chon khach hang"}
+                      {selectedChatUser?.full_name || "Chưa chọn khách hàng"}
                     </strong>
                     <p>
-                      {selectedChatUser?.email ||
-                        "Chon mot khach hang de hien avatar va luong chat."}
+                      {selectedChatUser?.phone ||
+                        selectedChatUser?.email ||
+                        "Hãy chọn một khách hàng để bắt đầu chat"}
                     </p>
                   </div>
                 </div>
-                <label className="field-label">
-                  Order ID
-                  <input
-                    className="field-input"
-                    type="number"
-                    value={chatForm.order_id}
-                    onChange={(event) =>
-                      setChatForm((prev) => ({
-                        ...prev,
-                        order_id: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
+                <div className="small-text">
+                  {chatForm.order_id
+                    ? `Đơn #${chatForm.order_id}`
+                    : "Không lọc đơn"}
+                </div>
+              </header>
+
+              <div
+                ref={chatScrollRef}
+                className="chat-thread compact-chat-thread seller-zalo-thread"
+              >
+                {chatMessages.length ? (
+                  chatMessages.map((message) => (
+                    <article
+                      key={message.id}
+                      className={`seller-message-row ${Number(message.sender_id) === Number(user?.id) ? "is-me" : "is-them"}`}
+                    >
+                      <div
+                        className={`chat-bubble seller-zalo-bubble ${Number(message.sender_id) === Number(user?.id) ? "me" : "them"}`}
+                      >
+                        <div className="seller-zalo-meta">
+                          <strong>
+                            {Number(message.sender_id) === Number(user?.id)
+                              ? "Shop"
+                              : selectedChatUser?.full_name || "Khách"}
+                          </strong>
+                          <span>{formatDateTime(message.created_at)}</span>
+                        </div>
+                        <p>{message.message}</p>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <p className="muted">Chưa có nội dung chat nào.</p>
+                )}
               </div>
-              <label className="field-label">
-                Noi dung
+
+              <form className="seller-chat-composer" onSubmit={onSendChat}>
                 <textarea
                   className="field-textarea"
                   value={chatForm.message}
@@ -970,63 +1177,14 @@ export default function SellerDashboard() {
                       message: event.target.value,
                     }))
                   }
+                  placeholder="Nhập tin nhắn và bấm Gửi..."
                   required
                 />
-              </label>
-              <button className="primary-btn" type="submit">
-                Gui
-              </button>
-            </form>
-
-            <div className="chat-thread compact-chat-thread">
-              {chatMessages.length ? (
-                chatMessages.map((message) => (
-                  <article
-                    key={message.id}
-                    className={`chat-bubble ${Number(message.sender_id) === Number(user?.id) ? "me" : "them"}`}
-                  >
-                    <div className="chat-bubble-head">
-                      <img
-                        className="compact-avatar compact-avatar-sm"
-                        src={resolveImageUrl(
-                          Number(message.sender_id) === Number(user?.id)
-                            ? user?.avatar_url
-                            : selectedChatUser?.avatar_url,
-                          Number(message.sender_id) === Number(user?.id)
-                            ? user?.full_name || user?.email
-                            : selectedChatUser?.full_name ||
-                                selectedChatUser?.email,
-                          buildFallbackAvatar,
-                        )}
-                        alt={
-                          Number(message.sender_id) === Number(user?.id)
-                            ? "Shop"
-                            : selectedChatUser?.full_name || "Khach"
-                        }
-                      />
-                      <div>
-                        <div className="small-text">
-                          {Number(message.sender_id) === Number(user?.id)
-                            ? "Shop"
-                            : selectedChatUser?.full_name || "Khach"}
-                        </div>
-                        <div className="chat-bubble-meta">
-                          {Number(message.sender_id) === Number(user?.id)
-                            ? user?.email || ""
-                            : selectedChatUser?.phone ||
-                              selectedChatUser?.email ||
-                              ""}
-                        </div>
-                      </div>
-                    </div>
-                    <p>{message.message}</p>
-                    <span>{formatDateTime(message.created_at)}</span>
-                  </article>
-                ))
-              ) : (
-                <p className="muted">Chua co noi dung chat nao.</p>
-              )}
-            </div>
+                <button className="primary-btn seller-chat-send" type="submit">
+                  Gửi
+                </button>
+              </form>
+            </section>
           </div>
         </section>
       )}

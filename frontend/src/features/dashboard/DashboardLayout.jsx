@@ -23,8 +23,8 @@ export default function DashboardLayout({
           </div>
 
           <div className="dashboard-identity">
-            <span className="pill">{user?.full_name || "No name"}</span>
-            <span className="pill">{user?.email || "No email"}</span>
+            <span className="pill">{user?.full_name || "Chưa có tên"}</span>
+            <span className="pill">{user?.email || "Chưa có email"}</span>
           </div>
 
           <div className="action-row compact-dashboard-actions">
@@ -35,10 +35,10 @@ export default function DashboardLayout({
               Dashboard
             </Link>
             <Link className="ghost-btn" to="/me">
-              Tai khoan
+              Tài khoản
             </Link>
             <button className="primary-btn" type="button" onClick={logout}>
-              Dang xuat
+              Đăng xuất
             </button>
           </div>
         </header>

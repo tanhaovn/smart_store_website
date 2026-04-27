@@ -1,5 +1,21 @@
 import { getStoredToken } from "../features/auth/storage";
 
+const API_BASE_URL = String(
+  import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || "",
+)
+  .trim()
+  .replace(/\/+$/, "");
+
+function resolveApiUrl(path) {
+  if (/^https?:\/\//i.test(String(path || ""))) {
+    return path;
+  }
+  const normalizedPath = String(path || "").startsWith("/")
+    ? String(path || "")
+    : `/${String(path || "")}`;
+  return API_BASE_URL ? `${API_BASE_URL}${normalizedPath}` : normalizedPath;
+}
+
 async function readResponse(response) {
   const contentType = response.headers.get("content-type") || "";
   if (contentType.includes("application/json")) {
@@ -25,7 +41,7 @@ export async function apiRequest(path, options = {}) {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(path, {
+  const response = await fetch(resolveApiUrl(path), {
     ...options,
     headers,
     body: hasBody

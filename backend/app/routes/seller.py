@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import func
 
 from app.database import db
-from app.models import Category, ChatMessage, Order, Product, Promotion, User
+from app.models import Category, ChatMessage, DeliveryAssignment, Order, Product, Promotion, User
 from app.utils import auth_required, get_json_body, parse_float, parse_int, require_fields
 
 
@@ -44,6 +44,13 @@ def create_product():
     if not name or price <= 0:
         return {"error": "name and valid price are required"}, 400
 
+    auto_approve = str(os.getenv("AUTO_APPROVE_SELLER_PRODUCTS", "true")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
     product = Product(
         name=name,
         image_url=image_url,
@@ -52,11 +59,129 @@ def create_product():
         stock=stock,
         category_id=category_id,
         seller_id=g.current_user_id,
-        is_approved=False,
+        is_approved=auto_approve,
     )
     db.session.add(product)
     db.session.commit()
+    if auto_approve:
+        return {"message": "Product created", "product_id": product.id}, 201
     return {"message": "Product created and waiting for approval", "product_id": product.id}, 201
+
+
+@seller_bp.get("/bootstrap")
+@auth_required(["SELLER"])
+def seller_bootstrap():
+    seller_id = g.current_user_id
+
+    products = Product.query.filter_by(seller_id=seller_id).order_by(Product.id.desc()).all()
+    categories = Category.query.order_by(Category.id.desc()).all()
+    orders = Order.query.filter_by(seller_id=seller_id).order_by(Order.id.desc()).all()
+    promotions = Promotion.query.filter_by(seller_id=seller_id).order_by(Promotion.id.desc()).all()
+
+    ordered_user_ids = {
+        row[0]
+        for row in db.session.query(Order.user_id)
+        .filter(Order.seller_id == seller_id)
+        .distinct()
+        .all()
+        if row[0] is not None
+    }
+
+    incoming_user_ids = {
+        row[0]
+        for row in db.session.query(ChatMessage.sender_id)
+        .filter(ChatMessage.receiver_id == seller_id)
+        .distinct()
+        .all()
+        if row[0] is not None
+    }
+
+    outgoing_user_ids = {
+        row[0]
+        for row in db.session.query(ChatMessage.receiver_id)
+        .filter(ChatMessage.sender_id == seller_id)
+        .distinct()
+        .all()
+        if row[0] is not None
+    }
+
+    chat_user_ids = ordered_user_ids | incoming_user_ids | outgoing_user_ids
+    chat_users = []
+    latest_order_by_user = {}
+    if chat_user_ids:
+        chat_users = (
+            User.query.filter(User.id.in_(chat_user_ids), User.role == "USER")
+            .order_by(User.full_name.asc(), User.id.asc())
+            .all()
+        )
+
+        user_orders = (
+            Order.query.filter(Order.seller_id == seller_id, Order.user_id.in_(chat_user_ids))
+            .order_by(Order.id.desc())
+            .all()
+        )
+        for order in user_orders:
+            if order.user_id not in latest_order_by_user:
+                latest_order_by_user[order.user_id] = order.id
+
+    completed_orders = (
+        Order.query.filter(Order.seller_id == seller_id, Order.status.in_(["DA_GIAO", "HOAN_THANH"]))
+        .order_by(Order.id.desc())
+        .all()
+    )
+    total_revenue = sum(o.total_amount for o in completed_orders)
+
+    return {
+        "products": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "image_url": p.image_url,
+                "price": p.price,
+                "stock": p.stock,
+                "is_approved": p.is_approved,
+                "category_id": p.category_id,
+            }
+            for p in products
+        ],
+        "categories": [
+            {"id": c.id, "name": c.name, "description": c.description}
+            for c in categories
+        ],
+        "orders": [
+            {
+                "id": o.id,
+                "user_id": o.user_id,
+                "status": o.status,
+                "total_amount": o.total_amount,
+                "shipping_fee": o.shipping_fee,
+            }
+            for o in orders
+        ],
+        "promotions": [
+            {
+                "id": p.id,
+                "code": p.code,
+                "discount_percent": p.discount_percent,
+                "is_active": p.is_active,
+            }
+            for p in promotions
+        ],
+        "chat_users": [
+            {
+                "id": user.id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "phone": user.phone,
+                "latest_order_id": latest_order_by_user.get(user.id),
+            }
+            for user in chat_users
+        ],
+        "revenue": {
+            "total_revenue": total_revenue,
+            "completed_orders": len(completed_orders),
+        },
+    }, 200
 
 
 @seller_bp.get("/products")
@@ -216,6 +341,11 @@ def update_order_status(order_id: int):
 
     order = Order.query.filter_by(id=order_id, seller_id=g.current_user_id).first_or_404()
     order.status = status
+
+    assignment = DeliveryAssignment.query.filter_by(order_id=order.id).first()
+    if assignment:
+        assignment.status = status
+
     db.session.commit()
     return {"message": "Order status updated"}, 200
 

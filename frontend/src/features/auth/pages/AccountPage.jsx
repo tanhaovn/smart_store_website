@@ -8,9 +8,9 @@ export default function AccountPage() {
   return (
     <main className="auth-page account-page">
       <section className="auth-card">
-        <h1>Xin chao, {user?.full_name || "ban"}</h1>
+        <h1>Xin chào, {user?.full_name || "bạn"}</h1>
         <p className="subtitle">
-          Tai khoan cua ban dang o vai tro {getRoleLabel(user?.role)}.
+          Tài khoản của bạn đang ở vai trò {getRoleLabel(user?.role)}.
         </p>
 
         <div className="user-summary">
@@ -18,10 +18,10 @@ export default function AccountPage() {
             <strong>Email:</strong> {user?.email || "-"}
           </p>
           <p>
-            <strong>Ho ten:</strong> {user?.full_name || "-"}
+            <strong>Họ tên:</strong> {user?.full_name || "-"}
           </p>
           <p>
-            <strong>Vai tro:</strong> {user?.role || "USER"}
+            <strong>Vai trò:</strong> {user?.role || "USER"}
           </p>
         </div>
 
@@ -30,15 +30,15 @@ export default function AccountPage() {
             className="secondary-btn"
             to={homePath || getHomePathForRole(user?.role)}
           >
-            Vao dashboard
+            Vào dashboard
           </Link>
           <button className="primary-btn" type="button" onClick={logout}>
-            Dang xuat
+            Đăng xuất
           </button>
         </div>
 
         <p className="auth-switch">
-          Quay lai <Link to="/login">trang dang nhap</Link>
+          Quay lại <Link to="/login">trang đăng nhập</Link>
         </p>
       </section>
     </main>

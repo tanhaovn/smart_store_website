@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../DashboardLayout";
 import { apiGet, apiPatch, apiPost } from "../../../services/http";
-import { formatDateTime, formatMoney, safeItems } from "../dashboardUtils";
+import {
+  formatDateTime,
+  formatMoney,
+  getOrderStatusClass,
+  getOrderStatusLabel,
+  safeItems,
+} from "../dashboardUtils";
 import { useAuth } from "../../auth/useAuth";
+import { useDbChangeSocket } from "../useDbChangeSocket";
+
+function normalizeStatus(status) {
+  return String(status || "")
+    .trim()
+    .toUpperCase();
+}
 
 export default function DeliveryDashboard() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [assignments, setAssignments] = useState([]);
   const [shippingFee, setShippingFee] = useState(null);
   const [notice, setNotice] = useState("");
@@ -55,6 +68,12 @@ export default function DeliveryDashboard() {
     );
   }, [user?.role]);
 
+  useDbChangeSocket(token, () => {
+    Promise.all([refreshAll(), loadChatPeers()]).catch((error) =>
+      setNotice(error.message),
+    );
+  });
+
   useEffect(() => {
     if (!chatPeers.length) {
       setSelectedChatKey("");
@@ -96,10 +115,10 @@ export default function DeliveryDashboard() {
     }
   };
 
-  const onUpdateStatus = async (orderId) => {
+  const onUpdateStatus = async (orderId, nextStatus = null) => {
     try {
       await apiPatch(`/api/delivery/orders/${orderId}/status`, {
-        status: statusByOrderId[orderId] || "CHO_XAC_NHAN",
+        status: nextStatus || statusByOrderId[orderId] || "DANG_GIAO",
       });
       await refreshAll();
     } catch (error) {
@@ -144,7 +163,7 @@ export default function DeliveryDashboard() {
   const onSendChat = async (event) => {
     event.preventDefault();
     if (!selectedChatThread) {
-      setNotice("Hay chon mot don hang truoc khi gui chat");
+      setNotice("Hãy chọn một đơn hàng trước khi gửi chat");
       return;
     }
 
@@ -164,17 +183,21 @@ export default function DeliveryDashboard() {
     }
   };
 
+  const pendingPickupCount = assignments.filter(
+    (assignment) => normalizeStatus(assignment.status) === "DANG_CHUAN_BI",
+  ).length;
+
   return (
     <DashboardLayout
-      title="Khu vuc Giao hang"
-      subtitle="Quan ly trang thai don, thong tin giao hang, phi giao hang va mock shipper."
+      title="Khu vực Giao hàng"
+      subtitle="Quản lý trạng thái đơn, thông tin giao hàng, phí giao hàng và mock shipper."
       highlights={[
-        { label: "Phan cong", value: assignments.length },
+        { label: "Phân công", value: assignments.length },
         {
-          label: "Phi du tinh",
+          label: "Phí dự tính",
           value: shippingFee ? formatMoney(shippingFee) : "-",
         },
-        { label: "Trang thai", value: "4 buoc" },
+        { label: "Chờ nhận", value: pendingPickupCount },
       ]}
     >
       {notice && (
@@ -186,13 +209,13 @@ export default function DeliveryDashboard() {
       <section className="panel">
         <div className="panel-head">
           <div>
-            <h2>Tinh phi van chuyen</h2>
-            <p>Cong thuc don gian dua tren khoang cach va can nang.</p>
+            <h2>Tính phí vận chuyển</h2>
+            <p>Công thức đơn giản dựa trên khoảng cách và cân nặng.</p>
           </div>
         </div>
         <form className="inline-form" onSubmit={onCalculateFee}>
           <label className="field-label">
-            Distance (km)
+            Khoảng cách (km)
             <input
               className="field-input"
               type="number"
@@ -207,7 +230,7 @@ export default function DeliveryDashboard() {
             />
           </label>
           <label className="field-label">
-            Weight (kg)
+            Cân nặng (kg)
             <input
               className="field-input"
               type="number"
@@ -222,7 +245,7 @@ export default function DeliveryDashboard() {
             />
           </label>
           <button className="primary-btn" type="submit">
-            Tinh phi
+            Tính phí
           </button>
         </form>
         {shippingFee !== null && (
@@ -232,55 +255,58 @@ export default function DeliveryDashboard() {
         )}
       </section>
 
-      <section className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>Phan cong don</h2>
-            <p>Admin hoac shipper co the phan cong don cho mot shipper.</p>
+      {user?.role !== "DELIVERY" && (
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>Phân công đơn</h2>
+              <p>Admin hoặc shipper có thể phân công đơn cho một shipper.</p>
+            </div>
           </div>
-        </div>
-        <form className="inline-form" onSubmit={onAssignOrder}>
-          <label className="field-label">
-            Order ID
-            <input
-              className="field-input"
-              type="number"
-              value={assignForm.order_id}
-              onChange={(event) =>
-                setAssignForm((prev) => ({
-                  ...prev,
-                  order_id: event.target.value,
-                }))
-              }
-              required
-            />
-          </label>
-          <label className="field-label">
-            Shipper ID (tuy chon)
-            <input
-              className="field-input"
-              type="number"
-              value={assignForm.shipper_id}
-              onChange={(event) =>
-                setAssignForm((prev) => ({
-                  ...prev,
-                  shipper_id: event.target.value,
-                }))
-              }
-            />
-          </label>
-          <button className="primary-btn" type="submit">
-            Phan cong
-          </button>
-        </form>
-      </section>
+          <form className="inline-form" onSubmit={onAssignOrder}>
+            <label className="field-label">
+              Mã đơn hàng
+              <input
+                className="field-input"
+                type="number"
+                value={assignForm.order_id}
+                onChange={(event) =>
+                  setAssignForm((prev) => ({
+                    ...prev,
+                    order_id: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+            <label className="field-label">
+              Mã shipper (tùy chọn)
+              <input
+                className="field-input"
+                type="number"
+                value={assignForm.shipper_id}
+                onChange={(event) =>
+                  setAssignForm((prev) => ({
+                    ...prev,
+                    shipper_id: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <button className="primary-btn" type="submit">
+              Phân công
+            </button>
+          </form>
+        </section>
+      )}
 
       <section className="panel">
         <div className="panel-head">
           <div>
-            <h2>Don dang giao</h2>
+            <h2>Đơn đang giao</h2>
             <p>
-              Cap nhat trang thai, dia chi, so dien thoai va ghi chu giao hang.
+              Chỉ nhận đơn khi shop đã xác nhận (Đang chuẩn bị), sau đó chuyển
+              sang Đang giao.
             </p>
           </div>
         </div>
@@ -291,8 +317,8 @@ export default function DeliveryDashboard() {
                 <th>Assignment</th>
                 <th>Order</th>
                 <th>Shipper</th>
-                <th>Status</th>
-                <th>Cap nhat</th>
+                <th>Trạng thái</th>
+                <th>Cập nhật</th>
               </tr>
             </thead>
             <tbody>
@@ -301,45 +327,70 @@ export default function DeliveryDashboard() {
                   <td>#{assignment.assignment_id}</td>
                   <td>#{assignment.order_id}</td>
                   <td>{assignment.shipper_id}</td>
-                  <td>{assignment.status}</td>
                   <td>
-                    <div className="inline-form">
-                      <label className="field-label">
-                        Trang thai
-                        <select
-                          className="field-select"
-                          value={
-                            statusByOrderId[assignment.order_id] ||
-                            assignment.status
-                          }
-                          onChange={(event) =>
-                            setStatusByOrderId((prev) => ({
-                              ...prev,
-                              [assignment.order_id]: event.target.value,
-                            }))
-                          }
-                        >
-                          <option value="CHO_XAC_NHAN">CHO_XAC_NHAN</option>
-                          <option value="DANG_CHUAN_BI">DANG_CHUAN_BI</option>
-                          <option value="DANG_GIAO">DANG_GIAO</option>
-                          <option value="DA_GIAO">DA_GIAO</option>
-                        </select>
-                      </label>
-                      <button
-                        className="secondary-btn"
-                        type="button"
-                        onClick={() => onUpdateStatus(assignment.order_id)}
-                      >
-                        Luu
-                      </button>
+                    <span
+                      className={`order-status ${getOrderStatusClass(assignment.status)}`}
+                    >
+                      {getOrderStatusLabel(assignment.status)}
+                    </span>
+                  </td>
+                  <td>
+                    {(() => {
+                      const status = normalizeStatus(assignment.status);
+                      if (status === "DANG_CHUAN_BI") {
+                        return (
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={() => {
+                              setStatusByOrderId((prev) => ({
+                                ...prev,
+                                [assignment.order_id]: "DANG_GIAO",
+                              }));
+                              onUpdateStatus(assignment.order_id, "DANG_GIAO");
+                            }}
+                          >
+                            Nhận đơn
+                          </button>
+                        );
+                      }
+
+                      if (status === "DANG_GIAO") {
+                        return (
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={() => {
+                              setStatusByOrderId((prev) => ({
+                                ...prev,
+                                [assignment.order_id]: "DA_GIAO",
+                              }));
+                              onUpdateStatus(assignment.order_id, "DA_GIAO");
+                            }}
+                          >
+                            Xác nhận đã giao
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <span className="small-text">
+                          {status === "DA_GIAO"
+                            ? "Đơn đã hoàn tất"
+                            : "Chờ shop xác nhận"}
+                        </span>
+                      );
+                    })()}
+                    {user?.role !== "DELIVERY" && (
                       <button
                         className="ghost-btn"
                         type="button"
                         onClick={() => onMockNext(assignment.order_id)}
+                        style={{ marginLeft: 8 }}
                       >
-                        Next mock
+                        Bước mock tiếp
                       </button>
-                    </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -351,8 +402,8 @@ export default function DeliveryDashboard() {
       <section className="panel">
         <div className="panel-head">
           <div>
-            <h2>Thong tin giao hang</h2>
-            <p>Cap nhat dia chi, so dien thoai va ghi chu cua don.</p>
+            <h2>Thông tin giao hàng</h2>
+            <p>Cập nhật địa chỉ, số điện thoại và ghi chú của đơn.</p>
           </div>
         </div>
         <form
@@ -360,7 +411,7 @@ export default function DeliveryDashboard() {
           onSubmit={(event) => event.preventDefault()}
         >
           <label className="field-label">
-            Order ID can cap nhat
+            Mã đơn hàng cần cập nhật
             <input
               className="field-input"
               type="number"
@@ -370,7 +421,7 @@ export default function DeliveryDashboard() {
           </label>
           <div className="two-col">
             <label className="field-label">
-              Dia chi
+              Địa chỉ
               <input
                 className="field-input"
                 value={infoForm.shipping_address}
@@ -383,7 +434,7 @@ export default function DeliveryDashboard() {
               />
             </label>
             <label className="field-label">
-              So dien thoai
+              Số điện thoại
               <input
                 className="field-input"
                 value={infoForm.shipping_phone}
@@ -397,7 +448,7 @@ export default function DeliveryDashboard() {
             </label>
           </div>
           <label className="field-label">
-            Ghi chu
+            Ghi chú
             <textarea
               className="field-textarea"
               value={infoForm.note}
@@ -407,7 +458,8 @@ export default function DeliveryDashboard() {
             />
           </label>
           <p className="small-text">
-            Chon mot order ID trong danh sach o tren va bam nut Luu de cap nhat.
+            Chọn một mã đơn hàng trong danh sách ở trên và bấm nút Lưu để cập
+            nhật.
           </p>
           <div className="action-row">
             <button
@@ -415,10 +467,10 @@ export default function DeliveryDashboard() {
               type="button"
               onClick={() => onUpdateInfo(infoOrderId)}
             >
-              Luu thong tin
+              Lưu thông tin
             </button>
             <p className="small-text">
-              Chon mot order ID truoc khi cap nhat thong tin giao hang.
+              Chọn một mã đơn hàng trước khi cập nhật thông tin giao hàng.
             </p>
           </div>
         </form>
@@ -428,10 +480,10 @@ export default function DeliveryDashboard() {
         <section className="panel">
           <div className="panel-head">
             <div>
-              <h2>Chat voi khach</h2>
+              <h2>Chat với khách</h2>
               <p>
-                Chon don hang trong danh sach de mo dung cuoc tro chuyen voi
-                khach.
+                Chọn đơn hàng trong danh sách để mở đúng cuộc trò chuyện với
+                khách.
               </p>
             </div>
           </div>
@@ -440,10 +492,10 @@ export default function DeliveryDashboard() {
             <div className="chat-rail">
               <div className="chat-rail-head">
                 <div>
-                  <div className="small-text">Don dang giao</div>
+                  <div className="small-text">Đơn đang giao</div>
                   <strong>{chatPeers.length} thread</strong>
                 </div>
-                <span className="section-meta">Customer chat</span>
+                <span className="section-meta">Chat khách hàng</span>
               </div>
 
               <div className="chat-thread-list">
@@ -458,7 +510,7 @@ export default function DeliveryDashboard() {
                     >
                       <div className="chat-thread-top">
                         <div>
-                          <div className="chat-thread-badge">Khach hang</div>
+                          <div className="chat-thread-badge">Khách hàng</div>
                           <h3 className="chat-thread-title">{thread.label}</h3>
                         </div>
                         <span className="section-meta">#{thread.order_id}</span>
@@ -467,8 +519,8 @@ export default function DeliveryDashboard() {
                         {thread.subtitle}
                       </div>
                       <div className="chat-thread-meta">
-                        <span>Mo chat theo don</span>
-                        <span>{isActive ? "Dang mo" : "Chon de xem"}</span>
+                        <span>Mở chat theo đơn</span>
+                        <span>{isActive ? "Đang mở" : "Chọn để xem"}</span>
                       </div>
                     </button>
                   );
@@ -481,29 +533,29 @@ export default function DeliveryDashboard() {
                 {selectedChatThread ? (
                   <>
                     <div className="small-text">
-                      Don hang #{selectedChatThread.order_id}
+                      Đơn hàng #{selectedChatThread.order_id}
                     </div>
                     <h3>{selectedChatThread.label}</h3>
                     <p>{selectedChatThread.subtitle}</p>
                   </>
                 ) : (
                   <>
-                    <div className="small-text">Chua chon thread</div>
-                    <h3>Chon don hang ben trai</h3>
-                    <p>Moi tin nhan se duoc giu theo dung order.</p>
+                    <div className="small-text">Chưa chọn thread</div>
+                    <h3>Chọn đơn hàng bên trái</h3>
+                    <p>Mọi tin nhắn sẽ được giữ theo đúng đơn hàng.</p>
                   </>
                 )}
               </div>
 
               <div className="notice">
                 {selectedChatThread
-                  ? "Chat nay gan voi khach cua don nay, khong can nhap ID thu cong."
-                  : "Hay chon don hang truoc khi gui chat."}
+                  ? "Chat này gắn với khách của đơn này, không cần nhập ID thủ công."
+                  : "Hãy chọn đơn hàng trước khi gửi chat."}
               </div>
 
               <form className="chat-composer" onSubmit={onSendChat}>
                 <label className="field-label">
-                  Noi dung chat
+                  Nội dung chat
                   <textarea
                     className="field-textarea"
                     value={chatForm.message}
@@ -513,12 +565,12 @@ export default function DeliveryDashboard() {
                         message: event.target.value,
                       }))
                     }
-                    placeholder="Thong bao thoi gian giao hang, lien he khach, ..."
+                    placeholder="Thông báo thời gian giao hàng, liên hệ khách, ..."
                     required
                   />
                 </label>
                 <button className="primary-btn" type="submit">
-                  Gui chat
+                  Gửi chat
                 </button>
               </form>
 
@@ -535,17 +587,17 @@ export default function DeliveryDashboard() {
                     >
                       <div className="small-text">
                         {Number(message.sender_id) === Number(user?.id)
-                          ? "Ban"
-                          : "Khach"}
+                          ? "Bạn"
+                          : "Khách"}
                       </div>
                       <p>{message.message}</p>
                       <span>{formatDateTime(message.created_at)}</span>
                     </article>
                   ))
                 ) : selectedChatThread ? (
-                  <p className="muted">Chua co noi dung chat nao.</p>
+                  <p className="muted">Chưa có nội dung chat nào.</p>
                 ) : (
-                  <p className="muted">Hay chon don hang truoc khi gui chat.</p>
+                  <p className="muted">Hãy chọn đơn hàng trước khi gửi chat.</p>
                 )}
               </div>
             </div>

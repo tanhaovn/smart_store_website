@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /seller/dashboard
+Disallow: /delivery/dashboard
+Disallow: /api
+Allow: /api/public
+
+# Crawl delay
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://smartvision-shop.vercel.app/sitemap.xml
