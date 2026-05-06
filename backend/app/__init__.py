@@ -5,7 +5,7 @@ from flask import Flask, request
 from werkzeug.exceptions import HTTPException
 
 from app.database import db, migrate, socketio
-from app.models import User
+from app.models import Category, ChatMessage, Order, OrderItem, Product, Promotion, User
 from app.utils import hash_password
 
 
@@ -68,6 +68,165 @@ def _seed_default_accounts_if_empty():
     db.session.commit()
 
 
+def _seed_default_commerce_data_if_empty():
+    if Product.query.count() > 0:
+        return
+
+    seller = User.query.filter_by(email="seller1@smartstore.local").first()
+    if not seller:
+        seller = User(
+            email="seller1@smartstore.local",
+            full_name="Demo Seller",
+            phone="0922222222",
+            password_hash=hash_password("Hao@1909"),
+            role="SELLER",
+            is_active=True,
+        )
+        db.session.add(seller)
+        db.session.flush()
+
+    user = User.query.filter_by(email="user1@smartstore.local").first()
+    if not user:
+        user = User(
+            email="user1@smartstore.local",
+            full_name="Demo User",
+            phone="0933333333",
+            password_hash=hash_password("Hao@1909"),
+            role="USER",
+            is_active=True,
+        )
+        db.session.add(user)
+        db.session.flush()
+
+    category_names = [
+        "Rau cu - trai cay",
+        "Thit ca - hai san",
+        "Trung - sua",
+        "Gao - mi - do kho",
+        "Gia vi - nuoc cham",
+        "Do dung gia dinh",
+    ]
+    categories = {}
+    for category_name in category_names:
+        category = Category.query.filter_by(name=category_name).first()
+        if not category:
+            category = Category(name=category_name, description=f"Danh muc {category_name}")
+            db.session.add(category)
+            db.session.flush()
+        categories[category_name] = category
+
+    products_seed = [
+        {
+            "name": "Rau cai xanh huu co 500g",
+            "price": 22000,
+            "stock": 120,
+            "category": "Rau cu - trai cay",
+            "image_url": "https://picsum.photos/seed/rau-cai-xanh/800/800",
+        },
+        {
+            "name": "Thit ba chi heo 500g",
+            "price": 89000,
+            "stock": 80,
+            "category": "Thit ca - hai san",
+            "image_url": "https://picsum.photos/seed/thit-ba-chi/800/800",
+        },
+        {
+            "name": "Trung ga ta hop 10 qua",
+            "price": 35000,
+            "stock": 100,
+            "category": "Trung - sua",
+            "image_url": "https://picsum.photos/seed/trung-ga/800/800",
+        },
+        {
+            "name": "Gao ST25 tui 5kg",
+            "price": 185000,
+            "stock": 60,
+            "category": "Gao - mi - do kho",
+            "image_url": "https://picsum.photos/seed/gao-st25/800/800",
+        },
+        {
+            "name": "Nuoc mam truyen thong 500ml",
+            "price": 42000,
+            "stock": 90,
+            "category": "Gia vi - nuoc cham",
+            "image_url": "https://picsum.photos/seed/nuoc-mam/800/800",
+        },
+        {
+            "name": "Nuoc rua chen chanh 750ml",
+            "price": 28000,
+            "stock": 70,
+            "category": "Do dung gia dinh",
+            "image_url": "https://picsum.photos/seed/nuoc-rua-chen/800/800",
+        },
+    ]
+
+    product_rows = []
+    for item in products_seed:
+        product = Product.query.filter_by(name=item["name"], seller_id=seller.id).first()
+        if not product:
+            product = Product(
+                name=item["name"],
+                image_url=item.get("image_url", ""),
+                description=f"San pham demo {item['name']}",
+                price=item["price"],
+                stock=item["stock"],
+                seller_id=seller.id,
+                category_id=categories[item["category"]].id,
+                is_approved=True,
+            )
+            db.session.add(product)
+            db.session.flush()
+        product_rows.append(product)
+
+    if not Promotion.query.filter_by(seller_id=seller.id, code="DEMO10").first():
+        db.session.add(Promotion(seller_id=seller.id, code="DEMO10", discount_percent=10, is_active=True))
+
+    demo_order = Order.query.filter_by(user_id=user.id, seller_id=seller.id).first()
+    if not demo_order:
+        demo_order = Order(
+            user_id=user.id,
+            seller_id=seller.id,
+            total_amount=(product_rows[0].price * 2) + product_rows[1].price,
+            shipping_fee=15000,
+            payment_method="COD",
+            shipping_address="45 Nguyen Van Linh, Q7, TP.HCM",
+            shipping_phone="0933333333",
+            note="Nho giao truoc 18h, goi truoc khi giao",
+            status="CHO_XAC_NHAN",
+        )
+        db.session.add(demo_order)
+        db.session.flush()
+
+        db.session.add_all(
+            [
+                OrderItem(
+                    order_id=demo_order.id,
+                    product_id=product_rows[0].id,
+                    quantity=2,
+                    unit_price=product_rows[0].price,
+                ),
+                OrderItem(
+                    order_id=demo_order.id,
+                    product_id=product_rows[1].id,
+                    quantity=1,
+                    unit_price=product_rows[1].price,
+                ),
+            ]
+        )
+
+    if not ChatMessage.query.filter_by(sender_id=user.id, receiver_id=seller.id).first():
+        db.session.add(
+            ChatMessage(
+                sender_id=user.id,
+                receiver_id=seller.id,
+                order_id=demo_order.id,
+                message="Shop oi, rau nay minh lay loai non giup nhe.",
+            )
+        )
+
+    db.session.commit()
+
+
 def create_app(config_object="config.Config"):
     app = Flask(__name__, instance_path="/tmp/flask-instance")
     app.config.from_object(config_object)
@@ -121,6 +280,7 @@ def create_app(config_object="config.Config"):
     if auto_seed:
         with app.app_context():
             _seed_default_accounts_if_empty()
+            _seed_default_commerce_data_if_empty()
 
     start_db_change_watcher(app)
 

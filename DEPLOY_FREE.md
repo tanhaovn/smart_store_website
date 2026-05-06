@@ -14,13 +14,13 @@
 - Configure:
   - Root Directory: `backend`
   - Build Command: `pip install -r requirements.txt`
-  - Start Command: `python -m flask --app run.py db upgrade && python -m flask --app run.py seed-accounts && python run.py`
+  - Start Command: `python -m flask --app run.py db upgrade && python run.py`
 - Add Environment Variables:
   - `DATABASE_URL` = Render Postgres `External Database URL`
   - `SECRET_KEY` = random secret
   - `JWT_SECRET` = random secret
   - `FLASK_DEBUG` = `false`
-  - `AUTO_SEED_DEMO_ACCOUNTS` = `true` for first deploy, then set back to `false`
+  - `AUTO_SEED_DEMO_ACCOUNTS` = `true` for first deploy; keep it `true` if you want demo data to stay available on fresh instances
   - `FRONTEND_ORIGIN` = your Vercel domain (add after frontend deploy)
   - `CORS_ALLOWED_ORIGINS` = comma-separated frontend domains
 - Deploy and copy backend URL, example: `https://smartvision-api.onrender.com`

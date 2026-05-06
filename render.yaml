@@ -5,7 +5,7 @@ services:
     rootDir: backend
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python run.py
+    startCommand: python -m flask --app run.py db upgrade && python run.py
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
@@ -13,7 +13,7 @@ services:
       - key: FLASK_DEBUG
         value: false
       - key: AUTO_SEED_DEMO_ACCOUNTS
-        value: false
+        value: true
       - key: DB_WATCHER_ENABLED
         value: false
       - key: SECRET_KEY

@@ -231,6 +231,7 @@ export default function SellerDashboard() {
 
   async function refreshAll() {
     const bootstrap = await apiGet("/api/seller/bootstrap");
+    console.log("Bootstrap response:", bootstrap);
     setProducts(safeItems(bootstrap.products));
     setCategories(safeItems(bootstrap.categories));
     setOrders(safeItems(bootstrap.orders));
@@ -254,7 +255,10 @@ export default function SellerDashboard() {
   }
 
   useEffect(() => {
-    refreshAll().catch((error) => setNotice(error.message));
+    refreshAll().catch((error) => {
+      console.error("RefreshAll error:", error);
+      setNotice(error.message);
+    });
   }, []);
 
   useEffect(() => {
