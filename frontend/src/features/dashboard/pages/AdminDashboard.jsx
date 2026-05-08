@@ -11,6 +11,12 @@ import {
   safeItems,
 } from "../dashboardUtils";
 import { useDbChangeSocket } from "../useDbChangeSocket";
+import {
+  UserActivityChart,
+  PendingProductsChart,
+  OrderStatusChart,
+  PaymentStatsChart,
+} from "../components/StatisticsCharts";
 
 const initialSellerForm = {
   email: "",
@@ -74,7 +80,11 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    refreshAll().catch((error) => setNotice(error.message));
+    const timer = window.setTimeout(() => {
+      refreshAll().catch((error) => setNotice(error.message));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   useDbChangeSocket(token, () => {
@@ -269,6 +279,53 @@ export default function AdminDashboard() {
                 <h2>{payments.length}</h2>
               </article>
             </div>
+          </section>
+
+          <section className="panel compact-panel">
+            <div className="panel-head compact-head">
+              <div>
+                <h2>Biểu đồ hoạt động</h2>
+                <p>Xu hướng người dùng, đơn hàng và thanh toán.</p>
+              </div>
+            </div>
+            <UserActivityChart
+              users={users}
+              orders={orders}
+              payments={payments}
+            />
+          </section>
+
+          <section className="panel compact-panel">
+            <div className="panel-head compact-head">
+              <div>
+                <h2>Sản phẩm chờ duyệt vs Người dùng</h2>
+                <p>So sánh số lượng sản phẩm chờ duyệt với tổng người dùng.</p>
+              </div>
+            </div>
+            <PendingProductsChart
+              pendingProducts={pendingProducts}
+              users={users}
+            />
+          </section>
+
+          <section className="panel compact-panel">
+            <div className="panel-head compact-head">
+              <div>
+                <h2>Trạng thái đơn hàng</h2>
+                <p>Phân bố đơn hàng theo từng trạng thái.</p>
+              </div>
+            </div>
+            <OrderStatusChart orders={orders} />
+          </section>
+
+          <section className="panel compact-panel">
+            <div className="panel-head compact-head">
+              <div>
+                <h2>Phương thức thanh toán</h2>
+                <p>Thống kê giao dịch theo từng phương thức.</p>
+              </div>
+            </div>
+            <PaymentStatsChart payments={payments} />
           </section>
         </div>
       )}

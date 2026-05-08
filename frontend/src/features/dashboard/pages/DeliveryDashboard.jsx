@@ -40,7 +40,10 @@ export default function DeliveryDashboard() {
   const [chatForm, setChatForm] = useState({ message: "" });
 
   const selectedChatThread = useMemo(
-    () => chatPeers.find((thread) => thread.key === selectedChatKey) || null,
+    () =>
+      chatPeers.find((thread) => thread.key === selectedChatKey) ||
+      chatPeers[0] ||
+      null,
     [chatPeers, selectedChatKey],
   );
 
@@ -55,17 +58,18 @@ export default function DeliveryDashboard() {
   };
 
   useEffect(() => {
-    if (user?.role !== "DELIVERY") {
-      setChatPeers([]);
-      setSelectedChatKey("");
-      setChatMessages([]);
-      refreshAll().catch((error) => setNotice(error.message));
-      return;
-    }
+    const timer = window.setTimeout(() => {
+      if (user?.role !== "DELIVERY") {
+        refreshAll().catch((error) => setNotice(error.message));
+        return;
+      }
 
-    Promise.all([refreshAll(), loadChatPeers()]).catch((error) =>
-      setNotice(error.message),
-    );
+      Promise.all([refreshAll(), loadChatPeers()]).catch((error) =>
+        setNotice(error.message),
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [user?.role]);
 
   useDbChangeSocket(token, () => {
@@ -76,8 +80,6 @@ export default function DeliveryDashboard() {
 
   useEffect(() => {
     if (!chatPeers.length) {
-      setSelectedChatKey("");
-      setChatMessages([]);
       return;
     }
 
@@ -85,13 +87,12 @@ export default function DeliveryDashboard() {
       !selectedChatKey ||
       !chatPeers.some((thread) => thread.key === selectedChatKey)
     ) {
-      setSelectedChatKey(chatPeers[0].key);
+      // prefer keeping selectedChatKey stable; if missing, allow derived memo to pick first
     }
   }, [chatPeers, selectedChatKey]);
 
   useEffect(() => {
     if (!selectedChatThread) {
-      setChatMessages([]);
       return;
     }
 

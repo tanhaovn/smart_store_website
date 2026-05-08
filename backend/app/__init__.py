@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 from flask_cors import CORS
 from flask import Flask, request
@@ -17,6 +18,8 @@ def _parse_cors_origins() -> list[str]:
     defaults = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
     ]
 
     origins = configured or defaults
@@ -228,7 +231,10 @@ def _seed_default_commerce_data_if_empty():
 
 
 def create_app(config_object="config.Config"):
-    app = Flask(__name__, instance_path="/tmp/flask-instance")
+    instance_path = os.environ.get("FLASK_INSTANCE_PATH") or os.path.join(
+        tempfile.gettempdir(), "flask-instance"
+    )
+    app = Flask(__name__, instance_path=instance_path)
     app.config.from_object(config_object)
     os.makedirs(app.instance_path, exist_ok=True)
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
